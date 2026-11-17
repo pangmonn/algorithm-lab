@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>정렬·탐색 알고리즘 실험실</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* 레이아웃 아이디어: 연회색 바탕에 흰 패널. 색은 파랑(주요·진행)과 분홍(고정·오답) 두 가지만 쓰고, 입체감은 버튼과 카드의 두툼한 아랫면으로만 표현한다. 단일 테마. */
+:root{
+  --bg:#f5f6fa;
+  --panel:#ffffff;
+  --line:#e6e8f0;
+  --ink:#363a52;
+  --muted:#80849c;
+  --edge:#d6d9e5;
+  --blue:#6aa9f5; --blue-soft:#e6f0ff; --blue-edge:#4a86d4; --blue-ink:#2f63a8;
+  --pink:#ff97b2; --pink-soft:#ffe9ef; --pink-edge:#e0708f; --pink-ink:#b5466a;
+  --star:#ffc93c;
+  --font-display:'Jua','Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --font-title:var(--font-display);
+  --font-body:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.55;word-break:keep-all;overflow-wrap:break-word}
+.bg-orbs,.bg-floor{display:none}
+button,select,textarea,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+h1,h2,h3{font-family:var(--font-display);font-weight:400;line-height:1.25;margin:0;text-wrap:balance}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+[hidden]{display:none !important}
+svg.ic{width:17px;height:17px;fill:currentColor;flex:none}
+
+/* top bar */
+.topbar .wrap{display:flex;align-items:center;gap:12px;height:64px}
+.brand{background:none;border:0;padding:0;color:var(--ink);font-family:var(--font-display);font-size:22px;display:flex;align-items:center;gap:10px}
+.logo{display:inline-flex;gap:3px;align-items:flex-end}
+.logo i{width:8px;border-radius:4px;background:var(--blue)}
+.logo i:nth-child(1){height:10px}.logo i:nth-child(2){height:16px}.logo i:nth-child(3){height:22px;background:var(--pink)}
+.top-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.pill{border:2px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;padding:4px 14px;font-weight:700;font-size:14px}
+.pill[aria-pressed="true"]{border-color:var(--blue);color:var(--blue-ink);background:var(--blue-soft)}
+
+main{padding:6px 0 56px}
+.view{display:none}
+.view.on{display:block}
+
+/* 3D buttons: solid bottom edge only */
+.gbtn{border:0;border-radius:16px;padding:11px 22px;font-family:var(--font-display);font-size:19px;color:var(--ink);background:#fff;
+  box-shadow:0 5px 0 var(--edge),inset 0 0 0 2px var(--edge);transition:transform .08s,box-shadow .08s;white-space:nowrap}
+.gbtn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--edge),inset 0 0 0 2px var(--edge)}
+.gbtn.gold,.gbtn.mint{background:var(--blue);color:#fff;box-shadow:0 5px 0 var(--blue-edge)}
+.gbtn.gold:active,.gbtn.mint:active{box-shadow:0 1px 0 var(--blue-edge)}
+.gbtn.hint{background:var(--pink-soft);color:var(--pink-ink);box-shadow:0 5px 0 var(--pink),inset 0 0 0 2px var(--pink)}
+.gbtn.hint:active{box-shadow:0 1px 0 var(--pink),inset 0 0 0 2px var(--pink)}
+.gbtn.ghost{background:#fff}
+.gbtn.small{font-size:16px;padding:8px 15px;border-radius:14px}
+.gbtn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+.panel{background:var(--panel);border:2px solid var(--line);border-radius:24px;padding:22px 24px}
+
+/* home */
+.title-screen{text-align:center;padding:30px 0 30px}
+.title-screen .kicker{display:inline-block;background:var(--blue-soft);color:var(--blue-ink);font-family:var(--font-display);border-radius:999px;padding:3px 16px;font-size:16px}
+.title-screen h1{font-size:clamp(38px,6.5vw,64px);margin-top:14px;color:var(--ink)}
+.title-screen h1 .t2{color:var(--blue)}
+.title-screen p{margin:10px auto 0;max-width:46ch;color:var(--muted)}
+.worlds{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.world{border:2px solid var(--line);text-align:left;border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:8px;color:var(--ink);background:#fff;box-shadow:0 6px 0 var(--edge);transition:transform .15s}
+.world:hover{transform:translateY(-4px)}
+.world:active{transform:translateY(3px);box-shadow:0 2px 0 var(--edge)}
+.world .art{height:110px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:6px;border-radius:18px;padding-top:10px}
+.world.w-sort .art{background:var(--pink-soft)}
+.world.w-search .art{background:var(--blue-soft)}
+.world .art svg{height:96px;width:auto}
+.world .wtag{font-family:var(--font-display);font-size:15px;color:var(--muted)}
+.world h2{font-size:30px}
+.world p{margin:0;color:var(--muted);font-weight:700}
+.world .foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
+.stars{font-size:21px;letter-spacing:2px;color:#e3e5ee;white-space:nowrap}
+.stars b{color:var(--star);font-weight:400}
+.goal-line{color:var(--muted);text-align:center;margin-top:28px;font-size:14px}
+
+/* world header + stepper */
+.world-head{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;margin:6px 0 20px}
+.world-head h1{font-size:32px}
+.stepper{display:flex;gap:4px;margin-left:auto;background:#fff;border:2px solid var(--line);border-radius:999px;padding:4px}
+.stepper button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:7px 16px;font-family:var(--font-display);font-size:17px;display:flex;align-items:center;gap:7px}
+.stepper button .n{width:24px;height:24px;border-radius:50%;background:var(--bg);display:inline-grid;place-items:center;font-size:14px}
+.stepper button[aria-current="step"]{background:var(--blue);color:#fff}
+.stepper button[aria-current="step"] .n{background:#fff;color:var(--blue-ink)}
+
+/* learn */
+.learn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px}
+.learn-card{display:flex;flex-direction:column;gap:14px}
+.learn-card h2{font-size:30px}
+.learn-card .one{font-size:18px;margin:0;color:var(--muted)}
+.learn-card .key{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 12px;font-size:14px;font-weight:700;background:var(--blue-soft);color:var(--blue-ink)}
+.chip.coral{background:var(--pink-soft);color:var(--pink-ink)}
+.chip.gold{background:var(--blue-soft);color:var(--blue-ink)}
+.demo,.cards-scroll{background:var(--bg);border-radius:20px}
+.demo{padding:32px 10px 14px;min-height:156px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.demo .cap{font-size:14px;color:var(--muted);min-height:22px;text-align:center;font-weight:700}
+.learn-card .gbtn{align-self:flex-start;margin-top:auto}
+
+/* play */
+.play-grid{display:grid;grid-template-columns:1fr 290px;gap:22px;align-items:start}
+.mission-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+.mtabs{display:flex;gap:8px}
+.mtab{border:2px solid var(--line);border-radius:16px;padding:7px 16px;background:#fff;color:var(--muted);font-family:var(--font-display);font-size:18px;display:flex;gap:8px;align-items:center}
+.mtab .stars{font-size:15px}
+.mtab[aria-selected="true"]{border-color:var(--blue);color:var(--blue-ink);background:var(--blue-soft)}
+.mission-bar .right{margin-left:auto;display:flex;gap:8px}
+
+.hud{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.hchip{display:inline-flex;align-items:center;gap:6px;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+.hchip small{font-size:12px;color:var(--muted);font-weight:700}
+.hchip b{font-family:var(--font-display);font-weight:400;font-size:19px}
+.hchip.stage{font-family:var(--font-display);font-size:17px}
+.hchip.stage em{font-style:normal;background:var(--blue-soft);color:var(--blue-ink);border-radius:8px;padding:0 8px;margin-left:2px}
+.hchip .ic{color:var(--muted)}
+.hchip.score .ic{color:var(--star)}
+.prog{flex:1;min-width:120px;height:12px;background:var(--line);border-radius:999px;overflow:hidden}
+.prog i{display:block;height:100%;border-radius:999px;background:var(--blue);transition:width .35s}
+.combo{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-display);font-size:17px;color:var(--pink-ink);background:var(--pink-soft);border-radius:10px;padding:2px 10px}
+.combo:empty{display:none}
+.combo.pop{animation:pop .35s}
+@keyframes pop{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+.prompt{font-family:var(--font-display);font-size:clamp(22px,3vw,30px);text-align:center;margin:20px 0 0}
+.prompt .vs{color:var(--pink-ink);margin:0 4px}
+.word-chip{display:flex;justify-content:center;margin-top:8px}
+.cards-scroll{overflow-x:auto;padding:40px 14px 18px;margin:16px 0 0}
+.cards{display:flex;gap:14px;justify-content:center;min-width:min-content}
+.slot{display:flex;flex-direction:column;align-items:center;gap:9px;position:relative}
+.tagline{position:absolute;top:-28px;left:50%;transform:translateX(-50%);display:flex;gap:3px;white-space:nowrap;z-index:2}
+.tag{font-size:12px;font-weight:800;border-radius:8px;padding:1px 8px;color:#fff;background:var(--ink)}
+.tag.min{background:var(--pink)}
+.tag.cmp,.tag.mid,.tag.win{background:var(--blue)}
+
+.tile{min-width:76px;height:92px;padding:0 15px;border-radius:20px;border:2px solid var(--edge);background:#fff;color:var(--ink);
+  box-shadow:0 6px 0 var(--edge);font-family:var(--font-display);font-size:38px;display:grid;place-items:center;white-space:nowrap;
+  transition:background .2s,border-color .2s,opacity .2s,transform .1s}
+.tile.word{font-size:21px}
+.tile:hover{transform:translateY(-3px)}
+.tile:active{transform:translateY(4px);box-shadow:0 2px 0 var(--edge)}
+.tile.sel,.tile.cmp,.tile.mid{background:var(--blue-soft);border-color:var(--blue);color:var(--blue-ink);box-shadow:0 6px 0 var(--blue)}
+.tile.base{border-color:var(--ink);border-width:3px}
+.tile.min{outline:3px dashed var(--pink);outline-offset:4px}
+.tile.fixed{background:var(--pink);border-color:var(--pink);color:#fff;box-shadow:0 6px 0 var(--pink-edge)}
+.tile.found{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 6px 0 var(--blue-edge)}
+.tile.out{opacity:.3}
+.tile.out:hover{transform:none}
+.tile.pulse{animation:pulse 1s ease-in-out infinite}
+.tile.shake{animation:shake .35s}
+.idx{font-size:13px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
+.marks{height:20px;display:flex;gap:3px}
+.mark{font-size:12px;font-weight:800;border-radius:6px;padding:0 6px;background:var(--ink);color:#fff}
+.mark.m{background:var(--blue)}
+.small .tile{min-width:52px;height:68px;font-size:25px;padding:0 9px;border-radius:16px}
+.small .tile.word{font-size:15px}
+.small .cards{gap:8px}
+@keyframes pulse{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+
+.actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:22px;min-height:54px}
+.fb{margin:16px auto 0;max-width:640px;border-radius:14px;padding:9px 16px;text-align:center;font-weight:700;font-size:16px;background:var(--bg);color:var(--muted);min-height:44px}
+.fb.ok{background:var(--blue-soft);color:var(--blue-ink)}
+.fb.err{background:var(--pink-soft);color:var(--pink-ink)}
+.fb.hint{background:var(--bg);color:var(--ink);border:2px dashed var(--edge)}
+
+/* trail */
+.trail h3{font-size:21px}
+.trail .sub{font-size:13px;color:var(--muted);margin:2px 0 14px}
+.trail-list{display:flex;flex-direction:column;gap:8px}
+.trow{display:grid;grid-template-columns:48px 1fr;gap:8px;align-items:center;border-radius:12px;padding:5px 6px}
+.trow.cur{background:var(--blue-soft)}
+.trow.new{animation:slidein .35s ease-out}
+.trow .lab{font-size:12px;font-weight:800;color:var(--muted)}
+.trow.cur .lab{color:var(--blue-ink)}
+.mini{display:flex;gap:3px;flex-wrap:nowrap}
+.mini span{min-width:24px;height:26px;padding:0 4px;border-radius:7px;background:#fff;border:1.5px solid var(--edge);display:grid;place-items:center;font-size:12px;font-weight:800;white-space:nowrap}
+.mini span.f{background:var(--pink);border-color:var(--pink);color:#fff}
+.mini span.o{opacity:.25}
+.mini span.m,.mini span.w{background:var(--blue);border-color:var(--blue);color:#fff}
+.mini.cells span{min-width:0;flex:1;max-width:16px;padding:0;height:22px}
+.trail .mini{min-width:0}
+.trail .mini span{min-width:0;flex:1 1 0;padding:0 1px}
+.trow .desc{grid-column:2;font-size:12px;color:var(--muted)}
+.trail .empty{font-size:14px;color:var(--muted)}
+@keyframes slidein{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+/* compare */
+.cmp-wrap{max-width:860px;margin:0 auto}
+.dots{display:flex;justify-content:center;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.dots button{border:0;height:12px;width:12px;border-radius:999px;background:var(--edge);padding:0}
+.dots button.done{background:#a9cbf7}
+.dots button[aria-current="true"]{background:var(--blue);width:32px}
+.cpage h2{font-size:28px;text-align:center}
+.cpage .lead{text-align:center;color:var(--muted);margin:6px 0 20px}
+.vs-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:stretch}
+.vs-badge{align-self:center;font-family:var(--font-display);font-size:30px;color:var(--muted)}
+.score-card{border-radius:22px;padding:18px;text-align:center;background:var(--bg);border:2px solid var(--line)}
+.score-card h3{font-size:22px}
+.score-card .mine{display:inline-block;margin-top:6px;font-size:12px;font-weight:800;border-radius:999px;padding:1px 10px;background:#fff;color:var(--muted)}
+.score-card .mine.yes{background:var(--blue-soft);color:var(--blue-ink)}
+.score-card .big{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.score-card .big div{background:#fff;border-radius:16px;padding:10px 6px;border:2px solid var(--line)}
+.score-card .big b{display:block;font-family:var(--font-display);font-weight:400;font-size:40px;line-height:1.1;font-variant-numeric:tabular-nums}
+.score-card .big span{font-size:13px;color:var(--muted);font-weight:700}
+.score-card .big .win{border-color:var(--blue);background:var(--blue-soft)}
+.score-card .big .win b{color:var(--blue-ink)}
+.vs-note{margin:20px 0 0;text-align:center;font-weight:700}
+.replay{margin-top:16px;text-align:center}
+.log-wrap{overflow-x:auto;margin-top:12px;text-align:left}
+table.log{border-collapse:collapse;width:100%;font-size:13px;min-width:520px}
+table.log th{background:var(--bg);text-align:left;padding:7px 9px;white-space:nowrap;font-size:12px;color:var(--muted)}
+table.log td{border-top:1px solid var(--line);padding:5px 9px}
+table.log td.n{text-align:center;font-weight:800;width:56px}
+table.log tfoot td{font-weight:800;border-top:2px solid var(--line)}
+.snap{display:flex;gap:3px}
+.snap span{min-width:26px;height:24px;padding:0 5px;border-radius:6px;background:#fff;border:1.5px solid var(--edge);display:grid;place-items:center;font-weight:800;font-size:12px;white-space:nowrap}
+.snap span.c,.snap span.m{background:var(--blue-soft);border-color:var(--blue)}
+.snap span.s{background:var(--pink-soft);border-color:var(--pink)}
+.snap span.f{background:var(--pink);border-color:var(--pink);color:#fff}
+
+.qcard .qnum{display:flex;justify-content:center}
+.qcard .q{font-family:var(--font-display);font-size:clamp(21px,2.6vw,26px);text-align:center;margin:12px auto 22px;max-width:30ch}
+.qcard .q small{display:block;font-family:var(--font-body);font-size:14px;color:var(--muted);margin-top:6px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;counter-reset:opt}
+.opt{position:relative;border:0;background:#fff;border-radius:18px;padding:13px 14px 13px 50px;text-align:left;font-size:17px;font-weight:700;color:var(--ink);
+  box-shadow:0 5px 0 var(--edge),inset 0 0 0 2px var(--edge);transition:transform .08s}
+.opt::before{counter-increment:opt;content:counter(opt,upper-alpha);position:absolute;left:12px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:9px;
+  display:grid;place-items:center;font-family:var(--font-display);font-size:16px;color:var(--muted);background:var(--bg)}
+.opt:active{transform:translateY(4px);box-shadow:0 1px 0 var(--edge),inset 0 0 0 2px var(--edge)}
+.opt.right{background:var(--blue-soft);color:var(--blue-ink);box-shadow:0 5px 0 var(--blue),inset 0 0 0 2px var(--blue)}
+.opt.right::before{background:var(--blue);color:#fff}
+.opt.wrong{background:var(--pink-soft);color:var(--pink-ink);box-shadow:0 5px 0 var(--pink),inset 0 0 0 2px var(--pink)}
+.opt.wrong::before{background:var(--pink);color:#fff}
+.qfb{margin:18px 0 0;text-align:center;font-weight:700}
+.qfb.ok{color:var(--blue-ink)}
+.qfb.err{color:var(--pink-ink)}
+.qclear{font-family:var(--font-display);font-size:20px;background:var(--blue-soft);border-radius:14px;padding:9px}
+.qtable-wrap{max-width:460px;margin:14px auto 4px;background:var(--bg);border-radius:18px;padding:12px 16px}
+.qtable-cap{margin:0 0 6px;font-size:13px;color:var(--muted);font-weight:700;text-align:center}
+.qtable{width:100%;border-collapse:collapse;text-align:center}
+.qtable th{font-size:13px;color:var(--muted);padding:4px 6px}
+.qtable td{padding:6px;border-top:1px solid var(--line);font-family:var(--font-display);font-size:24px;color:var(--blue-ink);font-variant-numeric:tabular-nums}
+.qtable td:first-child{font-family:var(--font-body);font-size:15px;font-weight:700;text-align:left;color:var(--ink)}
+.qdone{border-left:5px solid var(--blue);background:var(--bg);border-radius:12px;padding:10px 14px;margin:12px 0}
+.qdone p{margin:0}
+.qd-q{font-size:15px;color:var(--muted)}
+.qd-a{font-weight:800;color:var(--blue-ink);margin-top:2px !important}
+.qd-why{font-size:14px;margin-top:2px !important}
+.qstep{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:1px 10px;background:var(--edge);color:var(--ink);margin-bottom:4px}
+.qstep.big{font-size:14px;padding:3px 14px;background:var(--blue-soft);color:var(--blue-ink);margin:16px 0 0}
+.qnow{animation:popin .3s ease-out}
+
+.lab-controls{display:flex;flex-wrap:wrap;gap:14px 24px;justify-content:center;align-items:flex-end;margin-bottom:18px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field > label,.field > .lab{font-size:13px;font-weight:800;color:var(--muted)}
+input[type=range]{accent-color:var(--blue);width:200px}
+select{border:2px solid var(--line);background:#fff;border-radius:12px;padding:8px 12px;font-weight:700}
+.bars{display:grid;gap:14px}
+.bar-group h4{margin:0 0 6px;font-size:14px;color:var(--muted)}
+.bar{display:grid;grid-template-columns:90px 1fr 90px;gap:10px;align-items:center;font-weight:700}
+.bar .track{height:26px;background:var(--bg);border-radius:10px;overflow:hidden}
+.bar .fill{height:100%;background:var(--blue);border-radius:10px;min-width:5px;transition:width .5s}
+.bar .fill.c{background:var(--pink)}
+.bar .v{text-align:right;font-family:var(--font-display);font-size:21px;font-variant-numeric:tabular-nums}
+.callout{margin-top:16px;background:var(--bg);border-radius:14px;padding:12px 16px;font-weight:700;text-align:center}
+textarea{width:100%;min-height:140px;border:2px solid var(--line);border-radius:16px;padding:14px;background:#fff;resize:vertical;font-size:16px}
+.copy-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center;margin-top:14px;font-size:14px;color:var(--muted)}
+.cnav{display:flex;justify-content:space-between;gap:12px;margin-top:22px}
+.medal-row{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.medal{text-align:center;background:var(--bg);border-radius:16px;padding:10px 20px}
+.medal b{display:block;font-family:var(--font-display);font-weight:400;font-size:18px}
+
+/* sheet / modal */
+.overlay{position:fixed;inset:0;background:rgba(54,58,82,.35);display:grid;place-items:center;padding:16px;z-index:50}
+.modal{background:#fff;border-radius:28px;padding:26px;width:min(520px,100%);max-height:calc(100% - 20px);overflow:auto;animation:popin .3s ease-out}
+@keyframes popin{from{transform:scale(.9);opacity:0}to{transform:none;opacity:1}}
+.modal h2{font-size:30px;text-align:center}
+.modal .bigstars{text-align:center;font-size:52px;letter-spacing:6px;color:#e3e5ee;margin:6px 0;line-height:1.2}
+.modal .bigstars b{color:var(--star);font-weight:400;display:inline-block;animation:pop .5s backwards}
+.modal .bigstars b:nth-child(2){animation-delay:.15s}.modal .bigstars b:nth-child(3){animation-delay:.3s}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 20px}
+.stat-grid div{background:var(--bg);border-radius:14px;padding:8px 4px;text-align:center}
+.stat-grid b{display:block;font-family:var(--font-display);font-weight:400;font-size:28px}
+.stat-grid span{font-size:12px;color:var(--muted);font-weight:700}
+.modal-actions{display:flex;flex-direction:column;gap:12px}
+.modal-actions .gbtn{width:100%}
+.sheet-fields{display:grid;gap:16px;margin:18px 0 22px}
+.seg{display:inline-flex;border:2px solid var(--line);border-radius:12px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:#fff;padding:7px 14px;font-weight:700;color:var(--muted)}
+.seg button + button{border-left:2px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--blue);color:#fff}
+.sheet-row{display:flex;flex-wrap:wrap;gap:10px}
+.toast-score{position:fixed;pointer-events:none;font-family:var(--font-display);font-size:24px;color:var(--blue-ink);z-index:40;animation:floatup .8s ease-out forwards}
+@keyframes floatup{from{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,-44px)}}
+canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
+
+
+/* check quiz */
+.worlds{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.world.w-quiz .art{background:var(--bg)}
+.quiz-best{font-size:14px;font-weight:700;color:var(--muted)}
+.qz-progress{margin-left:auto;display:flex;gap:6px}
+.qz-progress span{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-family:var(--font-display);font-size:15px;background:#fff;border:2px solid var(--line);color:var(--muted)}
+.qz-progress span.now{border-color:var(--blue);color:var(--blue-ink)}
+.qz-progress span.o{background:var(--blue);border-color:var(--blue);color:#fff}
+.qz-progress span.x{background:var(--pink);border-color:var(--pink);color:#fff}
+.qz-intro{text-align:center}
+.qz-intro .big{font-family:var(--font-display);font-size:60px;color:var(--blue);line-height:1.1}
+.qz-topics{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:16px 0 24px}
+.qz-head{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.qcards{background:var(--bg);border-radius:18px;padding:16px 18px 12px;margin:0 auto 18px;width:max-content;max-width:100%;overflow-x:auto}
+.qcards .cards{gap:8px}
+.qcards .tile{min-width:50px;height:62px;font-size:24px;border-radius:14px;padding:0 8px;cursor:default}
+.qcards .tile:hover,.qcards .tile:active{transform:none;box-shadow:0 6px 0 var(--edge)}
+.qcards .idx{font-size:12px}
+.qz-why{margin:16px 0 0;background:var(--bg);border-radius:14px;padding:12px 16px}
+.qz-why b{display:block;font-family:var(--font-display);font-weight:400;font-size:20px;margin-bottom:2px}
+.qz-why.ok b{color:var(--blue-ink)}
+.qz-why.err b{color:var(--pink-ink)}
+.qz-next{display:flex;justify-content:center;margin-top:18px}
+.qz-score{text-align:center}
+.qz-score .num{font-family:var(--font-display);font-size:72px;line-height:1;color:var(--blue)}
+.qz-stars{font-size:44px;letter-spacing:6px;margin:6px 0}
+.qz-score .num small{font-size:32px;color:var(--muted)}
+.qz-list{display:grid;gap:8px;margin:22px 0}
+.qz-row{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;border-radius:14px;padding:9px 12px;background:var(--bg)}
+.qz-row .mk{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-family:var(--font-display);color:#fff;background:var(--blue)}
+.qz-row.x .mk{background:var(--pink)}
+.qz-row .t{font-weight:700}
+.qz-row .t small{display:block;font-weight:500;color:var(--muted);font-size:13px}
+.qz-row .tp{font-size:13px;color:var(--muted);font-weight:700}
+.opts.n4{grid-template-columns:repeat(2,1fr)}
+@media (max-width:640px){.opts.n4{grid-template-columns:1fr}}
+.qz-actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+@media (max-width:900px){ .play-grid{grid-template-columns:1fr} }
+@media (max-width:640px){
+  .wrap{padding:0 16px}
+  .stepper{margin-left:0;width:100%;justify-content:space-between}
+  .stepper button{padding:6px 10px;font-size:15px}
+  .tile{min-width:58px;height:74px;font-size:28px}
+  .vs-grid{grid-template-columns:1fr}
+  .vs-badge{text-align:center}
+  .bar{grid-template-columns:70px 1fr 70px}
+  .brand .t{display:none}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+<div class="bg-orbs" aria-hidden="true"></div><div class="bg-floor" aria-hidden="true"></div>
+<header class="topbar">
+  <div class="wrap">
+    <button class="brand" type="button" data-go="home"><span class="logo" aria-hidden="true"><i></i><i></i><i></i></span><span class="t">알고리즘 실험실</span></button>
+    <div class="top-right">
+      <button class="pill" type="button" id="soundBtn" aria-pressed="false">소리 끔</button>
+      <button class="pill" type="button" data-go="home">처음 화면</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+<!-- HOME -->
+<section class="view" id="view-home">
+  <div class="title-screen">
+    <span class="kicker">정보 · 알고리즘</span>
+    <h1>정렬·탐색 <span class="t2">알고리즘 실험실</span></h1>
+    <p>카드를 직접 골라 정렬하고 탐색해 보세요. 실수 없이 끝내면 별 3개!</p>
+  </div>
+  <div class="worlds">
+    <button class="world w-sort" type="button" data-go="sort">
+      <div class="art" aria-hidden="true"><svg viewBox="0 0 240 120"><defs><linearGradient id="fa" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ffffff"/></linearGradient><linearGradient id="fg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff97b2"/><stop offset="1" stop-color="#ff97b2"/></linearGradient></defs>
+<g><polygon points="20,85 50,85 62,77 32,77" fill="#fff"/><rect x="20" y="85" width="30" height="30" rx="3" fill="url(#fa)"/><polygon points="50,85 62,77 62,107 50,115" fill="#d6d9e5"/>
+<polygon points="74,62 104,62 116,54 86,54" fill="#fff"/><rect x="74" y="62" width="30" height="53" rx="3" fill="url(#fa)"/><polygon points="104,62 116,54 116,107 104,115" fill="#d6d9e5"/>
+<polygon points="128,40 158,40 170,32 140,32" fill="#fff"/><rect x="128" y="40" width="30" height="75" rx="3" fill="url(#fa)"/><polygon points="158,40 170,32 170,107 158,115" fill="#d6d9e5"/>
+<polygon points="182,16 212,16 224,8 194,8" fill="#ffc3d3"/><rect x="182" y="16" width="30" height="99" rx="3" fill="url(#fg)"/><polygon points="212,16 224,8 224,107 212,115" fill="#e0708f"/></g></svg></div>
+      <span class="wtag">월드 1</span>
+      <h2>정렬 알고리즘 알아보기</h2>
+      <p>버블 정렬 · 선택 정렬</p>
+      <div class="foot"><span class="stars" id="homeSortStars"></span><span class="gbtn gold small">입장하기</span></div>
+    </button>
+    <button class="world w-search" type="button" data-go="search">
+      <div class="art" aria-hidden="true"><svg viewBox="0 0 240 120"><defs><linearGradient id="fb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ffffff"/></linearGradient><linearGradient id="fc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6aa9f5"/><stop offset="1" stop-color="#6aa9f5"/></linearGradient><radialGradient id="gl"><stop offset="0" stop-color="#ffffff" stop-opacity=".6"/><stop offset="1" stop-color="#ffffff" stop-opacity=".6"/></radialGradient></defs>
+<g opacity=".45"><rect x="10" y="70" width="34" height="42" rx="7" fill="#fff" stroke="#d6d9e5" stroke-width="3"/><rect x="50" y="70" width="34" height="42" rx="7" fill="#fff" stroke="#d6d9e5" stroke-width="3"/><rect x="170" y="70" width="34" height="42" rx="7" fill="#fff" stroke="#d6d9e5" stroke-width="3"/></g>
+<rect x="90" y="70" width="34" height="42" rx="7" fill="#fff" stroke="#d6d9e5" stroke-width="3"/><rect x="130" y="64" width="34" height="48" rx="7" fill="url(#fc)" stroke="#fff" stroke-width="3"/>
+<circle cx="150" cy="44" r="32" fill="url(#gl)" stroke="#363a52" stroke-width="8"/><rect x="170" y="66" width="14" height="44" rx="7" transform="rotate(-42 177 88)" fill="#ff97b2" stroke="#e0708f" stroke-width="3"/></svg></div>
+      <span class="wtag">월드 2</span>
+      <h2>탐색 알고리즘 알아보기</h2>
+      <p>순차 탐색 · 이진 탐색</p>
+      <div class="foot"><span class="stars" id="homeSearchStars"></span><span class="gbtn gold small">입장하기</span></div>
+    </button>
+    <button class="world w-quiz" type="button" data-go="quiz">
+      <div class="art" aria-hidden="true"><svg viewBox="0 0 240 120"><rect x="72" y="8" width="96" height="108" rx="14" fill="#fff" stroke="#d6d9e5" stroke-width="4"/>
+<rect x="92" y="30" width="18" height="18" rx="5" fill="#6aa9f5"/><path d="M96 39l4 4 7-8" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="118" y="35" width="34" height="8" rx="4" fill="#d6d9e5"/>
+<rect x="92" y="58" width="18" height="18" rx="5" fill="#6aa9f5"/><path d="M96 67l4 4 7-8" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="118" y="63" width="34" height="8" rx="4" fill="#d6d9e5"/>
+<rect x="92" y="86" width="18" height="18" rx="5" fill="#fff" stroke="#ff97b2" stroke-width="3"/><rect x="118" y="91" width="34" height="8" rx="4" fill="#d6d9e5"/></svg></div>
+      <span class="wtag">마무리</span>
+      <h2>점검 퀴즈</h2>
+      <p>7문항 · 정말 이해했는지 확인해요</p>
+      <div class="foot"><span class="quiz-best" id="homeQuizBest">아직 안 풀었어요</span><span class="gbtn gold small">풀어 보기</span></div>
+    </button>
+  </div>
+  <p class="goal-line">성취기준: 여러 알고리즘의 효율성을 비교하여 효율적인 알고리즘을 선택할 수 있다.</p>
+</section>
+
+<!-- SORT -->
+<section class="view" id="view-sort">
+  <div class="world-head">
+    <h1>정렬 월드</h1>
+    <nav class="stepper" aria-label="학습 단계" data-world="sort">
+      <button type="button" data-step="learn"><span class="n">1</span>알아보기</button>
+      <button type="button" data-step="play"><span class="n">2</span>도전하기</button>
+      <button type="button" data-step="compare"><span class="n">3</span>비교하기</button>
+    </nav>
+  </div>
+
+  <div data-pane="learn">
+    <div class="learn-grid">
+      <div class="panel learn-card">
+        <h2>버블 정렬</h2>
+        <p class="one">바로 옆 두 카드를 비교해서, 순서가 틀리면 바꿔요.</p>
+        <div class="demo"><div class="cards" id="demoBubble"></div><div class="cap" id="demoBubbleCap"></div></div>
+        <div class="key"><span class="chip">인접한 두 카드 비교</span><span class="chip coral">한 단계마다 맨 뒤 고정</span></div>
+        <button class="gbtn gold" type="button" data-start="bubble">버블 정렬 도전하기</button>
+      </div>
+      <div class="panel learn-card">
+        <h2>선택 정렬</h2>
+        <p class="one">가장 작은 값을 찾아서, 맨 앞(기준 위치)과 바꿔요.</p>
+        <div class="demo"><div class="cards" id="demoSelection"></div><div class="cap" id="demoSelectionCap"></div></div>
+        <div class="key"><span class="chip">최솟값 찾기</span><span class="chip coral">한 단계에 교환은 최대 1번</span></div>
+        <button class="gbtn gold" type="button" data-start="selection">선택 정렬 도전하기</button>
+      </div>
+    </div>
+  </div>
+
+  <div data-pane="play" hidden>
+    <div class="mission-bar">
+      <div class="mtabs" role="tablist" aria-label="정렬 알고리즘">
+        <button class="mtab" type="button" role="tab" data-algo="bubble">버블 정렬 <span class="stars" data-stars="bubble"></span></button>
+        <button class="mtab" type="button" role="tab" data-algo="selection">선택 정렬 <span class="stars" data-stars="selection"></span></button>
+      </div>
+      <div class="right">
+        <button class="gbtn ghost small" type="button" id="sSettings">데이터 바꾸기</button>
+        <button class="gbtn ghost small" type="button" id="sRestart">처음부터</button>
+      </div>
+    </div>
+    <div class="play-grid">
+      <div class="panel" id="sortBoard">
+        <div class="hud" id="sortHud"></div>
+        <p class="prompt" id="sortPrompt"></p>
+        <div class="word-chip" id="sortWordChip" hidden><span class="chip gold">단어는 가나다순! 앞에 오는 단어가 더 작아요</span></div>
+        <div class="cards-scroll"><div class="cards" id="sortCards"></div></div>
+        <div class="actions" id="sortActions"></div>
+        <div class="fb" id="sortFb" role="status" aria-live="polite"></div>
+      </div>
+      <aside class="panel trail" aria-label="지나온 길">
+        <h3>지나온 길</h3>
+        <p class="sub">단계가 끝날 때마다 카드 모양이 쌓여요</p>
+        <div class="trail-list" id="sortTrail"></div>
+      </aside>
+    </div>
+  </div>
+
+  <div data-pane="compare" hidden>
+    <div class="cmp-wrap">
+      <div class="dots" id="sortDots"></div>
+      <div class="panel cpage" id="sortPage"></div>
+      <div class="cnav"><button class="gbtn" type="button" id="sPrev">이전</button><button class="gbtn gold" type="button" id="sNext">다음</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- SEARCH -->
+<section class="view" id="view-search">
+  <div class="world-head">
+    <h1>탐색 월드</h1>
+    <nav class="stepper" aria-label="학습 단계" data-world="search">
+      <button type="button" data-step="learn"><span class="n">1</span>알아보기</button>
+      <button type="button" data-step="play"><span class="n">2</span>도전하기</button>
+      <button type="button" data-step="compare"><span class="n">3</span>비교하기</button>
+    </nav>
+  </div>
+
+  <div data-pane="learn">
+    <div class="learn-grid">
+      <div class="panel learn-card">
+        <h2>순차 탐색</h2>
+        <p class="one">처음부터 하나씩 차례대로 확인해요.</p>
+        <div class="demo"><div class="cards" id="demoSeq"></div><div class="cap" id="demoSeqCap"></div></div>
+        <div class="key"><span class="chip">가장 단순한 방법</span><span class="chip">정렬 안 해도 OK</span></div>
+        <button class="gbtn gold" type="button" data-start="seq">순차 탐색 도전하기</button>
+      </div>
+      <div class="panel learn-card">
+        <h2>이진 탐색</h2>
+        <p class="one">가운데 값과 비교해서, 범위를 절반씩 줄여요.</p>
+        <div class="demo"><div class="cards" id="demoBinary"></div><div class="cap" id="demoBinaryCap"></div></div>
+        <div class="key"><span class="chip">M = (L + R) ÷ 2, 소수점 버림</span><span class="chip coral">정렬된 데이터만 가능</span></div>
+        <button class="gbtn gold" type="button" data-start="binary">이진 탐색 도전하기</button>
+      </div>
+    </div>
+  </div>
+
+  <div data-pane="play" hidden>
+    <div class="mission-bar">
+      <div class="mtabs" role="tablist" aria-label="탐색 알고리즘">
+        <button class="mtab" type="button" role="tab" data-mode="seq">순차 탐색 <span class="stars" data-stars="seq"></span></button>
+        <button class="mtab" type="button" role="tab" data-mode="binary">이진 탐색 <span class="stars" data-stars="binary"></span></button>
+      </div>
+      <div class="right">
+        <button class="gbtn ghost small" type="button" id="tSettings">데이터 바꾸기</button>
+        <button class="gbtn ghost small" type="button" id="tRestart">처음부터</button>
+      </div>
+    </div>
+    <div class="play-grid">
+      <div class="panel" id="searchBoard">
+        <div class="hud" id="searchHud"></div>
+        <p class="prompt" id="searchPrompt"></p>
+        <div class="word-chip" id="searchWordChip" hidden><span class="chip gold">단어는 가나다순! 앞에 오는 단어가 더 작아요</span></div>
+        <div class="cards-scroll"><div class="cards" id="searchCards"></div></div>
+        <div class="actions" id="searchActions"></div>
+        <div class="fb" id="searchFb" role="status" aria-live="polite"></div>
+      </div>
+      <aside class="panel trail" aria-label="지나온 길">
+        <h3>지나온 길</h3>
+        <p class="sub" id="searchTrailSub">탐색 범위가 어떻게 줄었는지 쌓여요</p>
+        <div class="trail-list" id="searchTrail"></div>
+      </aside>
+    </div>
+  </div>
+
+  <div data-pane="compare" hidden>
+    <div class="cmp-wrap">
+      <div class="dots" id="searchDots"></div>
+      <div class="panel cpage" id="searchPage"></div>
+      <div class="cnav"><button class="gbtn" type="button" id="tPrev">이전</button><button class="gbtn gold" type="button" id="tNext">다음</button></div>
+    </div>
+  </div>
+</section>
+<!-- QUIZ -->
+<section class="view" id="view-quiz">
+  <div class="world-head">
+    <h1>점검 퀴즈</h1>
+    <div class="qz-progress" id="qzProgress"></div>
+  </div>
+  <div class="cmp-wrap"><div class="panel cpage" id="qzPage"></div></div>
+</section>
+</main>
+<div id="overlayRoot"></div>
+
+<script>
+(function(){
+'use strict';
+/* ========== 공통 도구 ========== */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const coll = new Intl.Collator('ko');
+const isNum = v => typeof v === 'number';
+const cmp = (a,b) => (isNum(a) && isNum(b)) ? a-b : coll.compare(String(a), String(b));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const disp = v => isNum(v) ? String(v) : `‘${esc(v)}’`;
+function batchim(v){ const s=String(v), ch=s[s.length-1];
+  if (/[0-9]/.test(ch)) return '013678'.includes(ch);
+  const c=ch.charCodeAt(0); if (c>=0xAC00 && c<=0xD7A3) return (c-0xAC00)%28!==0; return false; }
+const jo = (v,a,b) => disp(v) + (batchim(v)?a:b);
+const sym = (a,b) => { const c=cmp(a,b); return c>0?'&gt;':c<0?'&lt;':'='; };
+const rel = (a,b) => `${disp(a)} ${sym(a,b)} ${disp(b)}`;
+const fmt = n => n.toLocaleString('ko-KR');
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function randInts(n,lo,hi){ const s=new Set(); while(s.size<n) s.add(lo+Math.floor(Math.random()*(hi-lo+1))); return [...s]; }
+let uid=0; const mk = v => ({id:'k'+(uid++), v});
+function store(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function load(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
+const starStr = (n, max=3) => '<b>★</b>'.repeat(n) + '★'.repeat(max-n);
+
+const THEMES = {
+  movie:{label:'영화', words:['기생충','명량','극한직업','부산행','국제시장','괴물','베테랑','암살','택시운전사','서울의 봄','파묘','범죄도시','올드보이','왕의 남자','해운대','도둑들']},
+  song:{label:'노래', words:['봄날','좋은 날','밤양갱','사건의 지평선','벚꽃 엔딩','강남스타일','아리랑','거짓말','너랑 나','다시 만난 세계','내 손을 잡아','하루하루','마지막처럼','붉은 노을','섬집 아기','고향의 봄']},
+  sport:{label:'스포츠', words:['축구','야구','농구','배구','탁구','수영','태권도','양궁','펜싱','씨름','골프','테니스','유도','볼링','스키','하키']},
+  animal:{label:'동물', words:['고양이','강아지','호랑이','사자','코끼리','기린','판다','여우','다람쥐','펭귄','거북이','토끼','너구리','독수리','하마','얼룩말']},
+  food:{label:'음식', words:['김치찌개','떡볶이','비빔밥','불고기','라면','김밥','짜장면','치킨','피자','냉면','삼겹살','순대','만두','갈비탕','햄버거','잡채']},
+  fruit:{label:'과일', words:['사과','바나나','딸기','포도','수박','귤','복숭아','참외','키위','망고','체리','레몬','배','감','자두','파인애플']},
+  country:{label:'나라', words:['대한민국','일본','중국','미국','영국','프랑스','독일','브라질','캐나다','호주','이집트','인도','멕시코','스페인','이탈리아','태국']},
+  job:{label:'직업', words:['교사','의사','소방관','경찰관','요리사','프로그래머','간호사','디자이너','가수','배우','과학자','작가','기자','변호사','건축가','운동선수']}
+};
+
+const IC = {
+  eye:'<svg class="ic" viewBox="0 0 24 24"><path d="M12 5C6 5 2 12 2 12s4 7 10 7 10-7 10-7-4-7-10-7zm0 11a4 4 0 110-8 4 4 0 010 8z"/></svg>',
+  swap:'<svg class="ic" viewBox="0 0 24 24"><path d="M7 7h11l-3-3 1.4-1.4L22 8l-5.6 5.4L15 12l3-3H7zm10 10H6l3 3-1.4 1.4L2 16l5.6-5.4L9 12l-3 3h11z"/></svg>',
+  star:'<svg class="ic" viewBox="0 0 24 24"><path d="M12 2l3 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.8 5.7 21.4l1.5-7.1L1.8 9.4 9 8.6z"/></svg>',
+  flame:'<svg class="ic" viewBox="0 0 24 24"><path d="M12 2s5.5 4.6 5.5 10.3A5.5 5.5 0 016.5 12.3c0-2.2 1.1-3.8 2.2-4.9 0 2.2 1.1 3.3 2.2 3.3C10.9 7.4 9.8 5.2 12 2z"/></svg>',
+  layers:'<svg class="ic" viewBox="0 0 24 24"><path d="M12 2l10 5-10 5L2 7zm-7.6 8.3L12 14l7.6-3.7L22 11.5l-10 5-10-5zm0 4.5L12 18.5l7.6-3.7L22 16l-10 5-10-5z"/></svg>'
+};
+/* 소리 (기본 꺼짐) */
+let soundOn=false, actx=null;
+function beep(kind){
+  if (!soundOn) return;
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    const seq = kind==='ok' ? [[660,.07],[880,.09]] : kind==='err' ? [[200,.16]] : [[523,.1],[659,.1],[784,.1],[1047,.22]];
+    let t = actx.currentTime;
+    seq.forEach(([f,d]) => { const o=actx.createOscillator(), g=actx.createGain(); o.type = kind==='err'?'sawtooth':'triangle'; o.frequency.value=f;
+      g.gain.setValueAtTime(.12,t); g.gain.exponentialRampToValueAtTime(.001,t+d); o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t+d); t+=d*.9; });
+  }catch(e){}
+}
+$('#soundBtn').addEventListener('click', e => { soundOn=!soundOn; e.currentTarget.setAttribute('aria-pressed',String(soundOn)); e.currentTarget.textContent = soundOn?'소리 켬':'소리 끔'; if(soundOn) beep('ok'); });
+
+/* 카드 이동 애니메이션 */
+function flipRender(container, html){
+  const prev={}; $$('[data-id]',container).forEach(el=>prev[el.dataset.id]=el.getBoundingClientRect());
+  container.innerHTML = html;
+  if (reduceMotion) return;
+  $$('[data-id]',container).forEach(el=>{ const p=prev[el.dataset.id]; if(!p) return; const n=el.getBoundingClientRect();
+    const dx=p.left-n.left, dy=p.top-n.top;
+    if (Math.abs(dx)>1||Math.abs(dy)>1) el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:`translate(${dx/2}px,-34px)`},{transform:'none'}],{duration:520,easing:'ease-in-out'}); });
+}
+function shakeEl(container, idx){ const el=container.querySelector(`[data-idx="${idx}"]`); if(!el||reduceMotion) return; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+function floatScore(anchor, txt){
+  if (reduceMotion || !anchor) return;
+  const r = anchor.getBoundingClientRect(); const d=document.createElement('div');
+  d.className='toast-score'; d.textContent=txt; d.style.left=(r.left+r.width/2)+'px'; d.style.top=(r.top-10)+'px';
+  document.body.appendChild(d); setTimeout(()=>d.remove(),850);
+}
+function confetti(){
+  if (reduceMotion) return;
+  const c=document.createElement('canvas'); c.id='confetti'; document.body.appendChild(c);
+  const ctx=c.getContext('2d'); c.width=innerWidth; c.height=innerHeight;
+  const cols=['#6aa9f5','#ff97b2','#a9cbf7','#ffc3d3'];
+  const ps=Array.from({length:140},()=>({x:c.width/2+(Math.random()-.5)*200,y:c.height*.35,vx:(Math.random()-.5)*14,vy:-Math.random()*14-4,s:6+Math.random()*7,r:Math.random()*6,vr:(Math.random()-.5)*.3,col:cols[Math.floor(Math.random()*cols.length)]}));
+  let f=0; (function tick(){ ctx.clearRect(0,0,c.width,c.height);
+    ps.forEach(p=>{p.vy+=.45;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.col;ctx.fillRect(-p.s/2,-p.s/3,p.s,p.s*.66);ctx.restore();});
+    if(++f<110) requestAnimationFrame(tick); else c.remove(); })();
+}
+/* 모달 */
+function openModal(html, bind){
+  const root=$('#overlayRoot');
+  root.innerHTML = `<div class="overlay" role="dialog" aria-modal="true"><div class="modal">${html}</div></div>`;
+  const ov=$('.overlay',root);
+  ov.addEventListener('click', e => { if (e.target===ov) closeModal(); });
+  bind && bind($('.modal',root));
+  const f = $('button, select', root); f && f.focus();
+}
+function closeModal(){ $('#overlayRoot').innerHTML=''; }
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
+
+/* 점수·콤보 */
+function good(run, anchor){ run.combo++; const add = 10 + Math.min(run.combo-1,4)*2; run.score += add; floatScore(anchor, '+'+add); beep('ok'); }
+function bad(run){ run.mistakes++; run.combo=0; beep('err'); }
+const starsFor = m => m===0 ? 3 : m<=2 ? 2 : 1;
+function setFb(el, type, html){ el.className='fb '+(type||''); el.innerHTML=html; }
+
+/* 효율성 계산 */
+const needSwap = (a,b,o) => o==='asc' ? cmp(a,b)>0 : cmp(a,b)<0;
+const better = (cand,cur,o) => o==='asc' ? cmp(cand,cur)<0 : cmp(cand,cur)>0;
+function countBubble(arr,o){ const a=arr.slice(); let c=0,s=0; const n=a.length; for(let p=0;p<n-1;p++) for(let j=0;j<n-1-p;j++){ c++; if(needSwap(a[j],a[j+1],o)){[a[j],a[j+1]]=[a[j+1],a[j]]; s++;} } return {c,s}; }
+function countSelection(arr,o){ const a=arr.slice(); let c=0,s=0; const n=a.length; for(let i=0;i<n-1;i++){ let m=i; for(let k=i+1;k<n;k++){ c++; if(better(a[k],a[m],o)) m=k; } if(m!==i){[a[i],a[m]]=[a[m],a[i]]; s++;} } return {c,s}; }
+function countSeq(arr,t){ const i=arr.findIndex(v=>cmp(v,t)===0); return i<0?arr.length:i+1; }
+function countBinary(arr,t){ let L=0,R=arr.length-1,c=0; while(L<=R){const M=Math.floor((L+R)/2); c++; const d=cmp(t,arr[M]); if(d===0) return c; if(d<0) R=M-1; else L=M+1;} return c; }
+
+/* ========== 알아보기 데모 애니메이션 ========== */
+function bubbleFrames(vals){
+  const a=vals.map(mk), n=a.length, fr=[]; const fixed=[];
+  fr.push({a:a.slice(), cap:'정렬 전', f:[]});
+  for(let p=0;p<n-1;p++){ for(let j=0;j<n-1-p;j++){
+      fr.push({a:a.slice(), c:[j,j+1], f:fixed.slice(), cap:`${jo(a[j].v,'과','와')} ${a[j+1].v} 비교`});
+      if (a[j].v>a[j+1].v){ [a[j],a[j+1]]=[a[j+1],a[j]]; fr.push({a:a.slice(), c:[j,j+1], f:fixed.slice(), cap:'교환!'}); }
+    } fixed.push(n-1-p); fr.push({a:a.slice(), f:fixed.slice(), cap:`${a[n-1-p].v} 고정`}); }
+  fixed.push(0); fr.push({a:a.slice(), f:fixed.slice(), cap:'정렬 완료!'}); return fr;
+}
+function selectionFrames(vals){
+  const a=vals.map(mk), n=a.length, fr=[]; const fixed=[];
+  fr.push({a:a.slice(), cap:'정렬 전', f:[]});
+  for(let i=0;i<n-1;i++){ let m=i;
+    for(let k=i+1;k<n;k++){ fr.push({a:a.slice(), c:[k], base:i, min:m, f:fixed.slice(), cap:`최솟값 후보 ${a[m].v} vs ${a[k].v}`}); if(a[k].v<a[m].v) m=k; }
+    fr.push({a:a.slice(), base:i, min:m, f:fixed.slice(), cap:`최솟값은 ${a[m].v}`});
+    if (m!==i){ [a[i],a[m]]=[a[m],a[i]]; fr.push({a:a.slice(), base:i, min:i, f:fixed.slice(), cap:'기준 위치와 교환!'}); }
+    fixed.push(i); fr.push({a:a.slice(), f:fixed.slice(), cap:`${a[i].v} 고정`}); }
+  fixed.push(n-1); fr.push({a:a.slice(), f:fixed.slice(), cap:'정렬 완료!'}); return fr;
+}
+function seqFrames(vals,t){ const a=vals.map(mk), fr=[];
+  for(let k=0;k<a.length;k++){ const hit=a[k].v===t; fr.push({a, chk:k, out:[...Array(k).keys()], win:hit?k:-1, cap: hit?`${t} 찾았다! (${k+1}번 비교)`:`${a[k].v} ≠ ${t}`}); if(hit) break; }
+  return [{a, cap:`${jo(t,'을','를')} 찾아라`}].concat(fr); }
+function binaryFrames(vals,t){ const a=vals.map(mk), fr=[{a, cap:`${jo(t,'을','를')} 찾아라`, L:0, R:a.length-1}]; let L=0,R=a.length-1,c=0;
+  while(L<=R){ const M=Math.floor((L+R)/2); c++; fr.push({a,L,R,M,cap:`중앙값 ${a[M].v}`});
+    if(a[M].v===t){ fr.push({a,L,R,M,win:M,cap:`찾았다! (${c}번 비교)`}); break; }
+    if(t<a[M].v) R=M-1; else L=M+1; fr.push({a,L,R,cap:`${t} ${t<a[M].v?'<':'>'} ${a[M].v} → 범위 절반으로`}); }
+  return fr; }
+function drawDemo(el, cap, f){
+  const html = f.a.map((it,idx)=>{
+    const cls=['tile']; let tag='';
+    if (f.f && f.f.includes(idx)) cls.push('fixed');
+    if (f.c && f.c.includes(idx)) { cls.push('cmp'); }
+    if (f.base===idx){ cls.push('base'); tag+='<span class="tag">기준</span>'; }
+    if (f.min===idx){ cls.push('min'); tag+='<span class="tag min">최솟값</span>'; }
+    if (f.L!==undefined && (idx<f.L || idx>f.R)) cls.push('out');
+    if (f.out && f.out.includes(idx)) cls.push('out');
+    if (f.chk===idx) cls.push('cmp');
+    if (f.M===idx){ cls.push('mid'); tag+='<span class="tag mid">중앙값</span>'; }
+    if (f.win===idx){ cls.push('found'); tag='<span class="tag win">찾았다</span>'; }
+    return `<div class="slot"><div class="tagline">${tag}</div><div class="${cls.join(' ')}" data-id="${it.id}">${it.v}</div></div>`;
+  }).join('');
+  flipRender(el, html); cap.textContent = f.cap || '';
+}
+const demos = [];
+function setupDemo(elId, frames){
+  const el=$('#'+elId), cap=$('#'+elId+'Cap'); el.parentElement.classList.add('small');
+  const d={el,cap,frames,i:0}; demos.push(d); drawDemo(el,cap,frames[reduceMotion?frames.length-1:0]);
+}
+setInterval(() => {
+  if (reduceMotion) return;
+  demos.forEach(d => { if (!d.el.offsetParent) return; d.i=(d.i+1)%(d.frames.length+2); if (d.i<d.frames.length) drawDemo(d.el,d.cap,d.frames[d.i]); });
+}, 1100);
+setupDemo('demoBubble', bubbleFrames([5,2,7,3]));
+setupDemo('demoSelection', selectionFrames([5,2,7,3]));
+setupDemo('demoSeq', seqFrames([10,20,30,40,50,60,70],50));
+setupDemo('demoBinary', binaryFrames([10,20,30,40,50,60,70],50));
+
+/* ========== 라우팅 / 단계 ========== */
+function go(v){
+  if (!['home','sort','search','quiz'].includes(v)) v='home';
+  ['home','sort','search','quiz'].forEach(x => $('#view-'+x).classList.toggle('on', x===v));
+  if (location.hash.slice(1)!==v){ try{ history.replaceState(null,'','#'+v); }catch(e){} }
+  updateStars(); if (v==='quiz' && QZ.phase!=='q') { QZ.phase = QZ.phase==='end' ? 'end' : 'intro'; } if (v==='quiz') renderQZ(); window.scrollTo(0,0);
+}
+$$('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
+window.addEventListener('hashchange', () => go(location.hash.slice(1)));
+function setStep(world, step){
+  const W = world==='sort' ? S : T; W.step = step;
+  const view = $('#view-'+world);
+  $$('[data-pane]', view).forEach(p => p.hidden = p.dataset.pane!==step);
+  $$('.stepper button', view).forEach(b => b.toggleAttribute('aria-current', false));
+  $(`.stepper button[data-step="${step}"]`, view).setAttribute('aria-current','step');
+  if (step==='compare'){ W.cpage = 0; world==='sort' ? renderSortCompare() : renderSearchCompare(); }
+  window.scrollTo(0,0);
+}
+$$('.stepper').forEach(nav => $$('button',nav).forEach(b => b.addEventListener('click', () => setStep(nav.dataset.world, b.dataset.step))));
+function updateStars(){
+  $$('[data-stars]').forEach(el => { const k=el.dataset.stars; const W = (k==='bubble'||k==='selection') ? S : T; el.innerHTML = starStr(W.stars[k]); });
+  $('#homeSortStars').innerHTML = starStr(S.stars.bubble + S.stars.selection, 6);
+  $('#homeSearchStars').innerHTML = starStr(T.stars.seq + T.stars.binary, 6);
+}
+
+/* 한 화면 한 문제 퀴즈 */
+/* 질문 하나 = 여러 단계(steps). 단계 하나씩 맞히면 다음 단계가 열린다. */
+const one = q => ({id:q.id, sig:q.sig, label:q.label, table:q.table, steps:[{q:q.q, sub:q.sub, opts:q.opts, a:q.a, why:q.why, retry:q.retry}]});
+function stepTag(Q, si){ const s=Q.steps[si]; if (s.tag) return s.tag; if (Q.steps.length===1) return ''; return si===Q.steps.length-1 ? '최종 질문' : `차근차근 ${si+1}`; }
+function renderQuestion(container, Q, state, qi, total, onChange){
+  const k=Q.id+'|'+Q.sig; const st = state[k] || {cur:0, tried:{}, msg:''};
+  let html = `<div class="qcard"><div class="qnum"><span class="chip gold">생각해 보기 ${qi+1} / ${total}</span></div>`;
+  if (Q.table) html += Q.table;
+  Q.steps.forEach((s, si) => {
+    const tag = stepTag(Q, si);
+    if (si < st.cur){
+      html += `<div class="qdone">${tag?`<span class="qstep">${tag}</span>`:''}<p class="qd-q">${s.q}</p><p class="qd-a">✔ ${s.opts[s.a]}</p><p class="qd-why">${s.why}</p></div>`;
+    } else if (si === st.cur){
+      const tried = st.tried[si] || [];
+      html += `<div class="qnow">${tag?`<div class="qnum"><span class="qstep big">${tag}</span></div>`:''}
+        <p class="q">${s.q}${s.sub?`<small>${s.sub}</small>`:''}</p>${s.table||''}
+        <div class="opts n${s.opts.length}">${s.opts.map((o,oi)=>`<button type="button" class="opt ${tried.includes(oi)?'wrong':''}" data-o="${oi}">${o}</button>`).join('')}</div>
+        ${st.msg?`<p class="qfb err">${st.msg}</p>`:''}</div>`;
+    }
+  });
+  if (st.cur >= Q.steps.length) html += `<p class="qfb ok qclear">정답! 다음 문제로 넘어가요.</p>`;
+  html += `</div>`;
+  container.innerHTML = html;
+  $$('.qnow .opt', container).forEach(b => b.addEventListener('click', () => {
+    const s0 = state[k] = state[k] || {cur:0, tried:{}, msg:''};
+    const step = Q.steps[s0.cur]; if (!step) return;
+    const oi = +b.dataset.o;
+    if (oi === step.a){ s0.cur++; s0.msg=''; beep(s0.cur>=Q.steps.length ? 'win' : 'ok'); }
+    else { (s0.tried[s0.cur] = s0.tried[s0.cur] || []).push(oi); s0.msg = step.retry; beep('err'); }
+    onChange();
+    const now = $('.qnow, .qclear', container); if (now && !reduceMotion) now.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }));
+  return st.cur >= Q.steps.length;
+}
+const isSolved = (state,Q) => { const s=state[Q.id+'|'+Q.sig]; return !!(s && s.cur >= Q.steps.length); };
+function renderDots(el, pages, cur, solvedFn, onPick){
+  el.innerHTML = pages.map((p,i)=>`<button type="button" aria-label="${p.label}" title="${p.label}" class="${solvedFn(i)?'done':''}" ${i===cur?'aria-current="true"':''} data-p="${i}"></button>`).join('');
+  $$('button',el).forEach(b => b.addEventListener('click', () => onPick(+b.dataset.p)));
+}
+
+/* ======================================================
+   정렬 월드
+   ====================================================== */
+const S = { algo:'bubble', kind:'num', theme:'movie', order:'asc', size:5, init:[5,2,7,3], run:null, logs:{}, stars:{bubble:0, selection:0}, step:'learn', cpage:0, quiz:{} };
+const ext = () => S.order==='asc' ? '최솟값' : '최댓값';
+const orderName = () => S.order==='asc' ? '오름차순' : '내림차순';
+const sortKey = () => S.init.join('|') + '#' + S.order;
+
+function sortNew(values){
+  S.init = values.slice();
+  const n=values.length;
+  S.run = { arr:values.map(mk), n, pass:0, j:0, i:0, m:0, k:0, phase: S.algo==='bubble'?'pick':'base',
+    comps:0, swaps:0, mistakes:0, hints:0, hintLv:0, sel:[], pulse:[], score:0, combo:0, done:false,
+    log:[{stage:'시작', snap:values.slice(), marks:{}, text:'정렬하기 전 카드', c:0, s:0}],
+    trail:[{label:'시작', snap:values.slice(), f:[]}] };
+  setFb($('#sortFb'), '', S.algo==='bubble' ? '버블 정렬 시작! 가장 먼저 비교할 두 카드를 눌러요.' : '선택 정렬 시작! 기준 위치가 될 카드를 눌러요.');
+  renderSort();
+}
+function sortFixed(r){ const f=new Set(); if(r.done){for(let x=0;x<r.n;x++) f.add(x); return f;}
+  if (S.algo==='bubble') for(let x=r.n-r.pass;x<r.n;x++) f.add(x); else for(let x=0;x<r.i;x++) f.add(x); return f; }
+function sortLog(text, marks, c, s){ const r=S.run; r.log.push({stage:S.algo==='bubble'?r.pass+1:r.i+1, snap:r.arr.map(x=>x.v), marks, text, c, s}); }
+function sortReset(){ S.run.hintLv=0; S.run.pulse=[]; }
+
+function renderSort(){
+  const r=S.run, a=r.arr, fixed=sortFixed(r), word=S.kind==='word';
+  $$('#view-sort .mtab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.algo===S.algo)));
+  $('#sortWordChip').hidden = !word;
+  const total = r.n*(r.n-1)/2;
+  const stageNo = r.done ? r.n-1 : (S.algo==='bubble'?r.pass:r.i)+1;
+  $('#sortHud').innerHTML = `<span class="hchip stage">${S.algo==='bubble'?'버블':'선택'} · ${orderName()} <em>${r.done?'완료':`단계 ${stageNo}/${r.n-1}`}</em></span>
+    <div class="prog" title="비교 진행도"><i style="width:${r.comps/total*100}%"></i></div>
+    <span class="hchip">${IC.eye}<small>비교</small><b>${r.comps}</b></span><span class="hchip swap">${IC.swap}<small>교환</small><b>${r.swaps}</b></span>
+    <span class="hchip score">${IC.star}<b>${r.score}</b></span><span class="combo ${r.combo>1?'pop':''}">${r.combo>1?`${IC.flame}콤보 x${r.combo}`:''}</span>`;
+  let p='';
+  if (r.done) p='정렬 완료!';
+  else if (S.algo==='bubble') p = r.phase==='pick' ? (r.sel.length===1?'두 번째 카드를 골라요':'비교할 두 카드를 골라요') : `${disp(a[r.j].v)} <span class="vs">vs</span> ${disp(a[r.j+1].v)} · 교환할까요?`;
+  else p = r.phase==='base' ? '기준 위치 카드를 골라요' : r.phase==='scan' ? '다음에 비교할 카드를 골라요' : r.phase==='judge' ? `새로운 ${ext()} 후보는?` : `${ext()} ${disp(a[r.m].v)} ↔ 기준 ${disp(a[r.i].v)} · 교환할까요?`;
+  $('#sortPrompt').innerHTML = p;
+  const html = a.map((it,idx)=>{
+    const cls=['tile']; if (word) cls.push('word'); const tags=[];
+    if (fixed.has(idx)) cls.push('fixed');
+    if (!r.done){
+      if (S.algo==='bubble'){
+        if (r.phase==='pick' && r.sel.includes(idx)) cls.push('sel');
+        if (r.phase==='decide' && (idx===r.j||idx===r.j+1)) cls.push('cmp');
+      } else {
+        if (r.phase!=='base' && idx===r.i){ cls.push('base'); tags.push('<span class="tag">기준</span>'); }
+        if (r.phase!=='base' && idx===r.m){ cls.push('min'); tags.push(`<span class="tag min">${ext()}</span>`); }
+        if (r.phase==='judge' && idx===r.k){ cls.push('cmp'); tags.push('<span class="tag cmp">비교</span>'); }
+      }
+    }
+    if (r.pulse.includes(idx)) cls.push('pulse');
+    return `<div class="slot"><div class="tagline">${tags.join('')}</div><button type="button" class="${cls.join(' ')}" data-id="${it.id}" data-idx="${idx}" aria-label="${idx+1}번째 카드 ${esc(it.v)}">${esc(it.v)}</button><span class="idx">${idx+1}</span></div>`;
+  }).join('');
+  flipRender($('#sortCards'), html);
+  $$('#sortCards .tile').forEach(b => b.addEventListener('click', () => sortClick(+b.dataset.idx)));
+  let ah='';
+  if (!r.done){
+    if ((S.algo==='bubble' && r.phase==='decide') || (S.algo==='selection' && r.phase==='swap'))
+      ah += `<button type="button" class="gbtn mint" data-a="swap">교환한다</button><button type="button" class="gbtn" data-a="keep">교환하지 않는다</button>`;
+    if (S.algo==='selection' && r.phase==='judge')
+      ah += `<button type="button" class="gbtn mint" data-a="pm">${esc(a[r.m].v)}</button><button type="button" class="gbtn mint" data-a="pk">${esc(a[r.k].v)}</button>`;
+    ah += `<button type="button" class="gbtn hint" data-a="hint">힌트${r.hintLv?` ${r.hintLv}/2`:''}</button>`;
+  } else {
+    ah += `<button type="button" class="gbtn gold" data-a="result">결과 보기</button>`;
+  }
+  const act=$('#sortActions'); act.innerHTML=ah;
+  $$('button',act).forEach(b => b.addEventListener('click', e => sortAction(b.dataset.a, e.currentTarget)));
+  // trail
+  const grewS = r.trail.length > (r.trailShown||0); r.trailShown = r.trail.length;
+  $('#sortTrail').innerHTML = r.trail.map((t,ti)=>`<div class="trow ${ti===r.trail.length-1?'cur':''} ${grewS&&ti===r.trail.length-1&&ti>0?'new':''}"><span class="lab">${t.label}</span><div class="mini">${t.snap.map((v,ix)=>`<span class="${t.f.includes(ix)?'f':''}">${esc(v)}</span>`).join('')}</div></div>`).join('');
+}
+
+function sortErr(idx, msg){ bad(S.run); setFb($('#sortFb'),'err',msg); renderSort(); if(idx!=null) shakeEl($('#sortCards'),idx); }
+function sortOk(msg, anchor){ good(S.run, anchor); setFb($('#sortFb'),'ok',msg); }
+
+function sortClick(idx){
+  const r=S.run; if (r.done) return; const a=r.arr; const fixed=sortFixed(r);
+  const anchor = $(`#sortCards [data-idx="${idx}"]`);
+  if (S.algo==='bubble'){
+    if (r.phase!=='pick'){ setFb($('#sortFb'),'','아래 버튼으로 골라 주세요.'); return; }
+    if (r.sel.includes(idx)){ r.sel=r.sel.filter(x=>x!==idx); return renderSort(); }
+    if (fixed.has(idx)){ r.sel=[]; return sortErr(idx,'빨간 카드는 이미 고정됐어요!'); }
+    r.sel.push(idx); if (r.sel.length<2) return renderSort();
+    const [x,y]=r.sel.slice().sort((p,q)=>p-q); r.sel=[];
+    if (x===r.j && y===r.j+1){
+      r.comps++; r.phase='decide'; sortReset();
+      sortLog(`${disp(a[x].v)}, ${disp(a[y].v)} 비교`, {c:[x,y]}, 1, 0);
+      sortOk('좋아요! 이제 교환할지 정해요.', anchor);
+      return renderSort();
+    }
+    if (y-x!==1) return sortErr(null,'바로 옆에 붙은 두 카드만 비교해요!');
+    if (x<r.j) return sortErr(null,'그 쌍은 이번 단계에서 이미 비교했어요.');
+    return sortErr(null,'앞에서부터 차례대로! 아직 안 비교한 가장 앞쪽 쌍은?');
+  }
+  if (r.phase==='base'){
+    if (idx===r.i){ r.m=r.i; r.k=r.i+1; r.phase='scan'; sortReset();
+      sortLog(`${r.i+1}번째 위치를 기준으로 정함`, {m:[r.i]}, 0, 0);
+      sortOk(`정답! 처음엔 기준 값 ${jo(a[r.i].v,'이','가')} ${ext()} 후보예요.`, anchor); return renderSort(); }
+    return sortErr(idx, fixed.has(idx) ? '빨간 카드는 이미 고정됐어요!' : '기준 위치는 정렬 안 된 부분의 맨 앞이에요.');
+  }
+  if (r.phase==='scan'){
+    if (idx===r.k){ r.comps++; r.phase='judge'; sortReset();
+      sortLog(`${ext()} 후보 ${disp(a[r.m].v)}, ${disp(a[r.k].v)} 비교`, {c:[r.m,r.k]}, 1, 0);
+      sortOk('좋아요! 둘 중 누가 새 후보일까요?', anchor); return renderSort(); }
+    if (fixed.has(idx)) return sortErr(idx,'빨간 카드는 이미 고정됐어요!');
+    if (idx===r.m) return sortErr(idx,`그 카드는 지금의 ${ext()} 후보예요. 다음 카드를 골라요.`);
+    if (idx<r.k) return sortErr(idx,'그 카드는 이미 비교했어요.');
+    return sortErr(idx,'건너뛰지 말고 바로 다음 카드!');
+  }
+  setFb($('#sortFb'),'','아래 버튼으로 골라 주세요.');
+}
+
+function sortAction(act, btn){
+  const r=S.run;
+  if (act==='result') return sortResultModal();
+  if (r.done) return;
+  if (act==='hint') return sortHint();
+  const a=r.arr;
+  if (S.algo==='bubble' && r.phase==='decide'){
+    const x=a[r.j].v, y=a[r.j+1].v, need=needSwap(x,y,S.order);
+    if ((act==='swap')!==need) return sortErr(null, `${orderName()}은 ${S.order==='asc'?'작은':'큰'} 값이 앞! 다시 생각해 봐요.`);
+    if (need){ [a[r.j],a[r.j+1]]=[a[r.j+1],a[r.j]]; r.swaps++; sortLog(`${rel(x,y)} → 교환`, {s:[r.j,r.j+1]}, 0, 1); sortOk(`정답! ${rel(x,y)} → 교환`, btn); }
+    else { r.log[r.log.length-1].text += ` → ${rel(x,y)}, 그대로`; sortOk(`정답! ${rel(x,y)} → 그대로`, btn); }
+    sortReset(); r.j++; r.phase='pick';
+    if (r.j >= r.n-1-r.pass){
+      const pos=r.n-1-r.pass;
+      sortLog(`${pos+1}번째 위치에 ${esc(a[pos].v)} 고정`, {f:[pos]}, 0, 0);
+      r.pass++; r.j=0;
+      const f=[]; for(let x2=r.n-r.pass;x2<r.n;x2++) f.push(x2);
+      if (r.pass>=r.n-1) return sortFinish();
+      r.trail.push({label:`단계 ${r.pass}`, snap:a.map(o=>o.v), f});
+      setFb($('#sortFb'),'ok',`${disp(a[pos].v)} 고정! 단계 ${r.pass+1} 시작`);
+    }
+    return renderSort();
+  }
+  if (S.algo==='selection' && r.phase==='judge'){
+    const cur=a[r.m].v, cand=a[r.k].v, pickK=better(cand,cur,S.order);
+    if ((act==='pk')!==pickK) return sortErr(null, `${ext()}은 ${S.order==='asc'?'더 작은':'더 큰'} 값이에요!`);
+    if (pickK) r.m=r.k;
+    r.log[r.log.length-1].text += ` → 후보 ${disp(a[r.m].v)}`;
+    sortReset(); r.k++; r.phase = r.k>=r.n ? 'swap' : 'scan';
+    sortOk(r.phase==='swap' ? `정답! ${ext()}은 ${disp(a[r.m].v)}` : `정답! 후보는 ${disp(a[r.m].v)}`, btn);
+    return renderSort();
+  }
+  if (S.algo==='selection' && r.phase==='swap'){
+    const need=r.m!==r.i;
+    if ((act==='swap')!==need) return sortErr(null, need ? `${ext()}을 기준 위치로 보내야 해요!` : `${ext()}이 이미 기준 위치에 있어요!`);
+    const mv=a[r.m].v, bv=a[r.i].v;
+    if (need){ [a[r.i],a[r.m]]=[a[r.m],a[r.i]]; r.swaps++; sortLog(`${disp(mv)} ↔ ${disp(bv)} 교환`, {s:[r.i,r.m]}, 0, 1); sortOk(`정답! ${disp(mv)} ↔ ${disp(bv)} 교환`, btn); }
+    else sortOk('정답! 교환할 필요 없음', btn);
+    sortLog(`${r.i+1}번째 위치에 ${esc(a[r.i].v)} 고정`, {f:[r.i]}, 0, 0);
+    sortReset(); r.i++;
+    if (r.i>=r.n-1) return sortFinish();
+    r.trail.push({label:`단계 ${r.i}`, snap:a.map(o=>o.v), f:[...Array(r.i).keys()]});
+    r.phase='base'; setFb($('#sortFb'),'ok',`${r.i}번째 자리 고정! 단계 ${r.i+1} 시작`);
+    return renderSort();
+  }
+}
+
+function sortFinish(){
+  const r=S.run; r.done=true; r.phase='done'; sortReset();
+  r.log.push({stage:'완료', snap:r.arr.map(x=>x.v), marks:{f:[...Array(r.n).keys()]}, text:'정렬 완료', c:0, s:0});
+  r.trail.push({label:'완료', snap:r.arr.map(x=>x.v), f:[...Array(r.n).keys()]});
+  const st = starsFor(r.mistakes);
+  S.stars[S.algo] = Math.max(S.stars[S.algo], st);
+  S.logs[S.algo] = {key:sortKey(), log:r.log, comps:r.comps, swaps:r.swaps};
+  setFb($('#sortFb'),'ok','정렬 완료!');
+  renderSort(); updateStars(); beep('win'); confetti();
+  setTimeout(sortResultModal, reduceMotion?0:500);
+}
+function sortResultModal(){
+  const r=S.run; const st=starsFor(r.mistakes); const other=S.algo==='bubble'?'selection':'bubble';
+  const otherName = other==='bubble'?'버블 정렬':'선택 정렬';
+  const otherDone = S.logs[other] && S.logs[other].key===sortKey();
+  openModal(`<h2>${S.algo==='bubble'?'버블':'선택'} 정렬 클리어!</h2>
+    <div class="bigstars">${starStr(st)}</div>
+    <div class="stat-grid"><div><b>${r.comps}</b><span>비교</span></div><div><b>${r.swaps}</b><span>교환</span></div><div><b>${r.score}</b><span>점수</span></div><div><b>${r.mistakes}</b><span>실수</span></div></div>
+    <div class="modal-actions">
+      ${otherDone ? `<button class="gbtn gold" type="button" data-m="compare">두 정렬 비교하러 가기</button>` : `<button class="gbtn gold" type="button" data-m="other">같은 카드로 ${otherName} 도전</button>`}
+      ${otherDone ? `<button class="gbtn" type="button" data-m="random">새 카드로 다시 도전</button>` : `<button class="gbtn" type="button" data-m="compare">바로 비교하러 가기</button>`}
+      <button class="gbtn" type="button" data-m="close">닫기</button>
+    </div>`, m => {
+      $$('[data-m]', m).forEach(b => b.addEventListener('click', () => {
+        const k=b.dataset.m; closeModal();
+        if (k==='other'){ S.algo=other; sortNew(S.init); }
+        if (k==='compare') setStep('sort','compare');
+        if (k==='random') sortRandom();
+      }));
+    });
+}
+
+function sortHint(){
+  const r=S.run, a=r.arr; r.hintLv=Math.min(2,r.hintLv+1); r.hints++; r.pulse=[]; const lv=r.hintLv; let h='';
+  if (S.algo==='bubble'){
+    if (r.phase==='pick'){ if(lv===1) h=`옆에 붙은 두 카드를 앞에서부터 차례로! 고정 안 된 카드는 1~${r.n-r.pass}번이에요.`; else { h=`${r.j+1}번과 ${r.j+2}번 카드를 비교할 차례예요.`; r.pulse=[r.j,r.j+1]; } }
+    else { const x=a[r.j].v, y=a[r.j+1].v; h = lv===1 ? `앞 카드가 뒤 카드보다 ${S.order==='asc'?'크면':'작으면'} 교환해요.` : `${rel(x,y)} → ${needSwap(x,y,S.order)?'교환한다':'교환하지 않는다'}`; }
+  } else {
+    if (r.phase==='base'){ if(lv===1) h='정렬 안 된 부분의 맨 앞이 기준이에요.'; else { h=`${r.i+1}번 카드가 기준이에요.`; r.pulse=[r.i]; } }
+    else if (r.phase==='scan'){ if(lv===1) h='기준 다음 카드부터 하나씩 차례로 비교해요.'; else { h=`${r.k+1}번 카드를 비교할 차례예요.`; r.pulse=[r.k]; } }
+    else if (r.phase==='judge'){ const cur=a[r.m].v, cand=a[r.k].v; h = lv===1 ? `${ext()}은 ${S.order==='asc'?'더 작은':'더 큰'} 값이에요.` : `${rel(cur,cand)} → ${disp(better(cand,cur,S.order)?cand:cur)}`; }
+    else { h = lv===1 ? `${ext()}이 기준 위치에 없으면 교환해요.` : (r.m!==r.i?'다른 위치에 있으니 → 교환한다':'이미 기준 위치에 있으니 → 교환하지 않는다'); if(lv===2) r.pulse=[r.i,r.m]; }
+  }
+  setFb($('#sortFb'),'hint',h); renderSort();
+}
+
+function sortRandom(){ const n=S.size; if (S.kind==='num') sortNew(randInts(n,1,99)); else sortNew(shuffle(THEMES[S.theme].words).slice(0,n)); }
+function seg(id, opts, cur){ return `<div class="seg" id="${id}">${opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${v===cur}">${l}</button>`).join('')}</div>`; }
+function bindSeg(m, id, fn){ $$('#'+id+' button', m).forEach(b => b.addEventListener('click', () => { $$('#'+id+' button',m).forEach(x=>x.setAttribute('aria-pressed',String(x===b))); fn(b.dataset.v); })); }
+function themeSelect(id, cur){ return `<select id="${id}">${Object.entries(THEMES).map(([k,t])=>`<option value="${k}" ${k===cur?'selected':''}>${t.label}</option>`).join('')}</select>`; }
+
+function sortSettings(){
+  const tmp = {kind:S.kind, theme:S.theme, order:S.order, size:S.size};
+  openModal(`<h2>데이터 바꾸기</h2><div class="sheet-fields">
+    <div class="field"><span class="lab">카드 종류</span>${seg('stKind',[['num','숫자'],['word','단어']],tmp.kind)}</div>
+    <div class="field" id="stThemeF" ${tmp.kind==='num'?'hidden':''}><label for="stTheme">단어 주제</label>${themeSelect('stTheme',tmp.theme)}</div>
+    <div class="field"><span class="lab">정렬 방향</span>${seg('stOrder',[['asc','오름차순'],['desc','내림차순']],tmp.order)}</div>
+    <div class="field"><span class="lab">카드 수</span>${seg('stSize',[['4','4장'],['5','5장'],['6','6장'],['7','7장']],String(tmp.size))}</div>
+    </div><div class="modal-actions">
+    <button class="gbtn gold" type="button" id="stRandom">랜덤 카드로 시작</button>
+    <div class="sheet-row" id="stBook"><button class="gbtn small" type="button" data-b="5,2,7,3">교과서 예제 5, 2, 7, 3</button><button class="gbtn small" type="button" data-b="8,4,2,1">효율성 예제 8, 4, 2, 1</button></div>
+    </div>`, m => {
+      bindSeg(m,'stKind', v => { tmp.kind=v; $('#stThemeF',m).hidden = v==='num'; $('#stBook',m).hidden = v!=='num'; });
+      $('#stBook',m).hidden = tmp.kind!=='num';
+      bindSeg(m,'stOrder', v => tmp.order=v);
+      bindSeg(m,'stSize', v => tmp.size=+v);
+      $('#stTheme',m).addEventListener('change', e => tmp.theme=e.target.value);
+      const apply = () => { Object.assign(S,tmp); closeModal(); };
+      $('#stRandom',m).addEventListener('click', () => { apply(); sortRandom(); });
+      $$('#stBook button',m).forEach(b => b.addEventListener('click', () => { apply(); S.kind='num'; sortNew(b.dataset.b.split(',').map(Number)); }));
+    });
+}
+$('#sSettings').addEventListener('click', sortSettings);
+$('#sRestart').addEventListener('click', () => sortNew(S.init));
+$$('#view-sort .mtab').forEach(b => b.addEventListener('click', () => { S.algo=b.dataset.algo; sortNew(S.init); }));
+$$('#view-sort [data-start]').forEach(b => b.addEventListener('click', () => { S.algo=b.dataset.start; sortNew(S.init); setStep('sort','play'); }));
+
+/* 정렬 비교하기 */
+function sortQuestions(){
+  const data=S.init, n=data.length, b=countBubble(data,S.order), s=countSelection(data,S.order), key=sortKey();
+  const swapAns = b.s>s.s?0:b.s===s.s?1:2;
+  const table = `<div class="qtable-wrap"><p class="qtable-cap">카드 [${data.map(esc).join(', ')}]를 ${orderName()}으로 정렬했을 때</p>
+    <table class="qtable"><thead><tr><th></th><th>비교 횟수</th><th>교환 횟수</th></tr></thead>
+    <tbody><tr><td>버블 정렬</td><td>${b.c}번</td><td>${b.s}번</td></tr><tr><td>선택 정렬</td><td>${s.c}번</td><td>${s.s}번</td></tr></tbody></table></div>`;
+  const asc = S.order==='asc';
+  const sortedEx = asc ? '1, 2, 4, 8' : '8, 4, 2, 1', reverseEx = asc ? '8, 4, 2, 1' : '1, 2, 4, 8';
+  const bigFirst = asc ? '앞 카드가 뒤 카드보다 클 때' : '앞 카드가 뒤 카드보다 작을 때';
+  return [
+    one({id:'c',sig:key,label:'비교 횟수',table,q:'표를 보세요. 두 정렬의 <b>비교 횟수</b>는?',opts:['버블 정렬이 더 많다','같다','선택 정렬이 더 많다'],a:1,
+     why:`둘 다 ${n*(n-1)/2}번! 정렬 안 된 카드가 하나씩 줄어들며 모두 비교하니까요.`,retry:'표의 ‘비교 횟수’ 칸을 다시 봐요.'}),
+    one({id:'s',sig:key,label:'교환 횟수',table,q:'표를 보세요. 두 정렬의 <b>교환 횟수</b>는?',opts:['버블 정렬이 더 많다','같다','선택 정렬이 더 많다'],a:swapAns,
+     why: swapAns===0?`버블 ${b.s}번, 선택 ${s.s}번. 선택 정렬은 한 단계에 최대 한 번만 교환해요.`:`이번 카드는 둘 다 ${b.s}번이에요. 실험실에서 카드를 늘려 보면 차이가 커져요!`,
+     retry:'표의 ‘교환 횟수’ 칸을 다시 봐요.'}),
+    {id:'n10',sig:'2',label:'10장일 때',steps:[
+      {q:'카드 <b>4장</b>을 버블 정렬할 때, <b>단계 1</b>에서는 몇 번 비교했나요?',sub:'옆에 붙은 두 카드 쌍이 몇 개인지 세어 봐요',opts:['2번','3번','4번'],a:1,
+       why:'카드 4장 사이의 옆 쌍은 3개 → 3번 비교해요.',retry:'카드 4장을 나란히 놓고, 옆에 붙은 쌍을 세어 봐요.'},
+      {q:'단계 1이 끝나면 카드 하나가 고정돼요. 그럼 <b>단계 2, 단계 3</b>에서는 몇 번씩 비교할까요?',opts:['3번, 3번','2번, 1번','3번, 2번'],a:1,
+       why:'고정된 카드는 비교하지 않으니 한 단계마다 하나씩 줄어요. 모두 3 + 2 + 1 = 6번!',retry:'고정된 카드는 비교에서 빠져요. 비교할 카드가 하나씩 줄어들면?'},
+      {q:'이제 카드가 <b>10장</b>이에요. <b>단계 1</b>에서는 몇 번 비교할까요?',opts:['9번','10번','11번'],a:0,
+       why:'10장 사이의 옆 쌍은 9개 → 9번이에요.',retry:'4장일 때 3번이었죠? 카드 수와 비교 횟수의 관계를 생각해 봐요.'},
+      {q:'카드 10장일 때 <b>전체 비교 횟수</b>는?',sub:'9 + 8 + 7 + … + 1을 계산해 봐요',opts:['9번','45번','90번','100번'],a:1,
+       why:'9 + 8 + … + 1 = 45번! 선택 정렬도 똑같이 45번이에요.',retry:'9부터 1까지 하나씩 줄어드는 수를 모두 더해 봐요.'}
+    ]},
+    {id:'worst',sig:S.order+'2',label:'최악의 경우',steps:[
+      {q:'버블 정렬에서 <b>교환</b>은 언제 일어나나요?',opts:['비교할 때마다 항상',`${bigFirst} (순서가 틀렸을 때)`,'한 단계가 끝날 때'],a:1,
+       why:'두 카드의 순서가 틀렸을 때만 교환해요.',retry:'도전하기에서 ‘교환한다’를 눌렀을 때를 떠올려 봐요.'},
+      {q:`카드가 이미 [${sortedEx}]로 ${orderName()} 정렬되어 있으면, 교환은 몇 번 일어날까요?`,opts:['0번','3번','6번'],a:0,
+       why:'모든 쌍의 순서가 이미 맞으니 교환이 한 번도 없어요.',retry:'순서가 틀린 쌍이 하나라도 있나요?'},
+      {q:`카드가 반대 순서 [${reverseEx}]이면, 비교 6번 중 교환은 몇 번일까요?`,sub:'교과서의 효율성 예제예요',opts:['0번','3번','6번'],a:2,
+       why:'비교할 때마다 순서가 틀려서 6번 모두 교환해요!',retry:'반대 순서면 비교하는 쌍마다 순서가 어떨까요?'},
+      {q:'그렇다면 버블 정렬에서 <b>교환이 가장 많은</b> 카드 배치는?',opts:[`이미 ${orderName()}으로 정렬됨`,'반대 순서로 정렬됨','무작위로 섞임'],a:1,
+       why:'반대 순서면 비교할 때마다 교환이 일어나요. 이런 경우를 ‘최악의 경우’라고 해요.',retry:'바로 앞 질문의 답을 떠올려 봐요.'}
+    ]},
+    {id:'robot',sig:'2',label:'상황 선택',steps:[
+      {tag:'알고리즘 선택',q:'택배 상자를 무게 순으로 정렬하는 로봇이 있어요. 무게 비교는 금방이지만 <b>상자 옮기기(교환)</b>는 오래 걸려요. 어떤 정렬 알고리즘을 사용하는 게 좋을까?',
+       opts:['버블 정렬','선택 정렬','상관없다'],a:1,why:'선택 정렬이 좋아요.',retry:'오래 걸리는 건 비교일까요, 교환일까요?'},
+      {tag:'이유 선택',q:'선택 정렬을 사용하는 게 좋은 <b>이유</b>는?',
+       opts:['비교 횟수가 더 적어서','비교 횟수는 같지만, 교환 횟수가 더 적어서','교환을 한 번도 하지 않아서','선택 정렬이 더 간단해서'],a:1,
+       why:'두 정렬의 비교 횟수는 같고, 선택 정렬은 한 단계에 교환을 최대 한 번만 해요. 교환이 오래 걸릴수록 선택 정렬이 효율적이에요.',
+       retry:'점수판에서 두 정렬의 비교 횟수와 교환 횟수를 떠올려 봐요.'}
+    ]}
+  ];
+}
+function sortPages(){ const qs=sortQuestions(); return [{t:'vs',label:'점수판'}].concat(qs.map(q=>({t:'q',q,label:q.label})), [{t:'lab',label:'실험실'},{t:'end',label:'나의 결론'}]); }
+function renderSortCompare(){
+  const pages=sortPages(); S.cpage=Math.max(0,Math.min(S.cpage,pages.length-1)); const pg=pages[S.cpage]; const box=$('#sortPage');
+  const solved = i => pages[i].t==='q' ? isSolved(S.quiz,pages[i].q) : i<S.cpage;
+  renderDots($('#sortDots'), pages, S.cpage, solved, i => { S.cpage=i; renderSortCompare(); });
+  let canNext=true;
+  if (pg.t==='vs'){
+    const data=S.init, b=countBubble(data,S.order), s=countSelection(data,S.order), key=sortKey();
+    const mine = k => S.logs[k] && S.logs[k].key===key;
+    const card = (k,name,res,other) => `<div class="score-card"><h3>${name}</h3><span class="mine ${mine(k)?'yes':''}">${mine(k)?'직접 해 봄':'아직 안 해 봄'}</span>
+      <div class="big"><div><b>${res.c}</b><span>비교</span></div><div class="${res.s<other.s?'win':''}"><b>${res.s}</b><span>교환</span></div></div></div>`;
+    box.innerHTML = `<h2>점수판: 버블 vs 선택</h2><p class="lead">카드 [${data.map(esc).join(', ')}] · ${orderName()}</p>
+      <div class="vs-grid">${card('bubble','버블 정렬',b,s)}<div class="vs-badge">VS</div>${card('selection','선택 정렬',s,b)}</div>
+      <p class="vs-note">어떤 숫자가 같고, 어떤 숫자가 다른가요?</p>
+      <div class="replay">${['bubble','selection'].filter(mine).map(k=>`<button class="gbtn small" type="button" data-replay="${k}">${k==='bubble'?'버블':'선택'} 정렬 과정 다시 보기</button>`).join(' ')}
+      ${(!mine('bubble')||!mine('selection'))?`<p class="vs-note" style="font-weight:500;color:var(--muted)">두 정렬을 모두 직접 해 보면 과정을 다시 볼 수 있어요.</p>`:''}<div id="replayBox"></div></div>`;
+    $$('[data-replay]',box).forEach(bt => bt.addEventListener('click', () => { $('#replayBox').innerHTML = sortLogTable(S.logs[bt.dataset.replay]); }));
+  } else if (pg.t==='q'){
+    canNext = renderQuestion(box, pg.q, S.quiz, S.cpage-1, pages.length-3, renderSortCompare);
+  } else if (pg.t==='lab'){
+    box.innerHTML = `<h2>효율성 실험실</h2><p class="lead">카드를 늘려 보면 차이가 어떻게 될까?</p>
+      <div class="lab-controls"><div class="field"><label for="labN">카드 수: <b id="labNv"></b>장</label><input type="range" id="labN" min="4" max="50" value="${S.labN||10}"></div>
+      <div class="field"><label for="labCase">카드 상태</label><select id="labCase"><option value="random">무작위 (20번 평균)</option><option value="sorted">이미 정렬됨</option><option value="reverse">반대로 정렬됨</option></select></div></div>
+      <div class="bars" id="sortLab"></div>`;
+    $('#labCase').value = S.labCase||'random';
+    $('#labN').addEventListener('input', e => { S.labN=+e.target.value; drawSortLab(); });
+    $('#labCase').addEventListener('change', e => { S.labCase=e.target.value; drawSortLab(); });
+    drawSortLab();
+  } else {
+    box.innerHTML = conclusionHtml('sort', '어떤 상황에서 어떤 정렬을 고를까?', '비교 횟수와 교환 횟수를 근거로 써 보세요.', '예) 두 정렬의 비교 횟수는 같지만 교환 횟수는 ... 이므로, ... 할 때는 ... 정렬을 선택하겠다.', [['버블 정렬',S.stars.bubble],['선택 정렬',S.stars.selection]]);
+    bindConclusion('sort');
+  }
+  $('#sPrev').disabled = S.cpage===0;
+  $('#sNext').disabled = !canNext || S.cpage===pages.length-1;
+  $('#sNext').textContent = canNext ? '다음' : '정답을 맞혀야 넘어가요';
+}
+$('#sPrev').addEventListener('click', () => { S.cpage--; renderSortCompare(); window.scrollTo(0,0); });
+$('#sNext').addEventListener('click', () => { S.cpage++; renderSortCompare(); window.scrollTo(0,0); });
+function sortLogTable(L){
+  const rows = L.log.map(e=>{ const m=e.marks||{};
+    const snap=e.snap.map((v,ix)=>{ let c=''; if(m.c&&m.c.includes(ix)) c='c'; else if(m.s&&m.s.includes(ix)) c='s'; else if(m.f&&m.f.includes(ix)) c='f'; else if(m.m&&m.m.includes(ix)) c='m'; return `<span class="${c}">${esc(v)}</span>`; }).join('');
+    return `<tr><td style="white-space:nowrap">${typeof e.stage==='number'?'단계 '+e.stage:e.stage}</td><td><div class="snap">${snap}</div></td><td>${e.text}</td><td class="n">${e.c||''}</td><td class="n">${e.s||''}</td></tr>`; }).join('');
+  return `<div class="log-wrap"><table class="log"><thead><tr><th>단계</th><th>카드</th><th>설명</th><th>비교</th><th>교환</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="3">합계</td><td class="n">${L.comps}</td><td class="n">${L.swaps}</td></tr></tfoot></table></div>`;
+}
+function drawSortLab(){
+  const n=S.labN||10, kase=S.labCase||'random'; $('#labNv').textContent=n;
+  const base=Array.from({length:n},(_,i)=>i+1); let b,s;
+  if (kase==='random'){ let bc=0,bs=0,sc=0,ss=0; for(let t=0;t<20;t++){ const d=shuffle(base); const x=countBubble(d,'asc'), y=countSelection(d,'asc'); bc+=x.c;bs+=x.s;sc+=y.c;ss+=y.s; } b={c:Math.round(bc/20),s:Math.round(bs/20)}; s={c:Math.round(sc/20),s:Math.round(ss/20)}; }
+  else { const d = kase==='sorted'?base:base.slice().reverse(); b=countBubble(d,'asc'); s=countSelection(d,'asc'); }
+  const max=Math.max(b.c,s.c,b.s,s.s,1);
+  const bar=(l,v,c)=>`<div class="bar"><span>${l}</span><div class="track"><div class="fill ${c}" style="width:${v/max*100}%"></div></div><span class="v">${fmt(v)}</span></div>`;
+  $('#sortLab').innerHTML = `<div class="bar-group"><h4>비교 횟수</h4>${bar('버블',b.c,'')}${bar('선택',s.c,'')}</div>
+    <div class="bar-group"><h4>교환 횟수</h4>${bar('버블',b.s,'c')}${bar('선택',s.s,'c')}</div>
+    <div class="callout">비교는 둘 다 ${fmt(n*(n-1)/2)}번. 교환은 버블 ${fmt(b.s)}번, 선택 ${fmt(s.s)}번! (선택 정렬 교환은 최대 ${n-1}번)</div>`;
+}
+function conclusionHtml(w, title, lead, ph, medals){
+  return `<h2>${title}</h2><p class="lead">${lead}</p>
+    <div class="medal-row">${medals.map(([n,st])=>`<div class="medal"><b>${n}</b><span class="stars">${starStr(st)}</span></div>`).join('')}</div>
+    <label for="${w}Conc" hidden>나의 결론</label><textarea id="${w}Conc" placeholder="${ph}"></textarea>
+    <div class="copy-row"><button class="gbtn gold small" type="button" id="${w}Copy">결론 복사하기</button><span id="${w}CopyMsg"></span></div>`;
+}
+function bindConclusion(w){
+  const el=$('#'+w+'Conc'); el.value=load('algolab-'+w); el.addEventListener('input',()=>store('algolab-'+w,el.value));
+  $('#'+w+'Copy').addEventListener('click', async () => { try{ await navigator.clipboard.writeText(el.value); $('#'+w+'CopyMsg').textContent='복사 완료! 학습지에 붙여 넣으세요.'; }catch(e){ el.select(); $('#'+w+'CopyMsg').textContent='글을 선택했어요. Ctrl+C로 복사하세요.'; } });
+}
+
+/* ======================================================
+   탐색 월드
+   ====================================================== */
+const BOOK=[10,20,30,40,50,60,70];
+const T = { mode:'binary', kind:'num', theme:'movie', size:7, data:BOOK.slice(), target:50, absent:55, shuffled:null, run:null, logs:{}, stars:{seq:0,binary:0}, step:'learn', cpage:0, quiz:{} };
+const seqData = () => T.shuffled || T.data;
+
+function searchNew(){
+  const data = T.mode==='seq' ? seqData() : T.data;
+  T.run = { data:data.map(mk), n:data.length, L:0, R:data.length-1, M:null, k:0, phase:T.mode==='seq'?'pick':'mid',
+    comps:0, mistakes:0, hints:0, hintLv:0, pulse:[], selStart:null, score:0, combo:0, log:[], trail:[], done:false, found:-1, checked:[] };
+  setFb($('#searchFb'),'', T.mode==='seq' ? `${jo(T.target,'을','를')} 찾아요! 처음 확인할 카드를 눌러요.` : `${jo(T.target,'을','를')} 찾아요! 중앙값 카드를 눌러요.`);
+  renderSearch();
+}
+function makeAbsent(){
+  if (T.kind==='num'){ let v; do{ v=1+Math.floor(Math.random()*99); }while(T.data.includes(v)); T.absent=v; }
+  else { const rest=THEMES[T.theme].words.filter(w=>!T.data.includes(w)); T.absent=rest[Math.floor(Math.random()*rest.length)]; }
+}
+function searchSetData(data, target){
+  T.data=data.slice().sort(cmp); T.shuffled=null; makeAbsent();
+  T.target = target!==undefined ? target : (Math.random()<.85 ? T.data[Math.floor(Math.random()*T.data.length)] : T.absent);
+  searchNew();
+}
+function searchRandom(){ const n=T.size; if (T.kind==='num') searchSetData(randInts(n,1,99)); else searchSetData(shuffle(THEMES[T.theme].words).slice(0,n)); }
+function expectRange(){ const r=T.run; const c=cmp(T.target, r.data[r.M].v); return c<0?[r.L,r.M-1]:[r.M+1,r.R]; }
+function sReset(){ T.run.hintLv=0; T.run.pulse=[]; }
+
+function renderSearch(){
+  const r=T.run, word=T.kind==='word';
+  $$('#view-search .mtab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode===T.mode)));
+  $('#searchWordChip').hidden = !word;
+  $('#searchBoard').classList.toggle('small', r.n>9);
+  const left = T.mode==='binary' ? (r.done ? (r.found>=0?1:0) : r.R-r.L+1) : (r.done?0:r.n-r.k);
+  const stepNo = T.mode==='seq' ? r.comps : r.log.length + (r.done?0:1);
+  $('#searchHud').innerHTML = `<span class="hchip stage">찾을 값 <em>${esc(T.target)}</em></span>
+    <div class="prog cyan" title="남은 후보"><i style="width:${left/r.n*100}%"></i></div>
+    <span class="hchip">${IC.layers}<small>남은 후보</small><b>${left}</b></span><span class="hchip">${IC.eye}<small>비교</small><b>${r.comps}</b></span>
+    <span class="hchip score">${IC.star}<b>${r.score}</b></span><span class="combo ${r.combo>1?'pop':''}">${r.combo>1?`${IC.flame}콤보 x${r.combo}`:''}</span>`;
+  let p='';
+  if (r.done) p = r.found>=0 ? '찾았다!' : '데이터에 없어요!';
+  else if (T.mode==='seq') p = '다음에 확인할 카드를 골라요';
+  else if (r.phase==='mid') p = `L = ${r.L}, R = ${r.R} · 중앙값 카드를 골라요`;
+  else if (r.phase==='judge') p = `${disp(T.target)} <span class="vs">vs</span> ${disp(r.data[r.M].v)} · 어디를 탐색할까요?`;
+  else p = r.selStart===null ? '새 범위의 <u>시작</u> 카드를 골라요' : '새 범위의 <u>끝</u> 카드를 골라요';
+  $('#searchPrompt').innerHTML = p;
+  const html = r.data.map((it,idx)=>{
+    const cls=['tile']; if (word) cls.push('word'); const tags=[], marks=[];
+    if (T.mode==='seq'){ if (r.checked.includes(idx) && idx!==r.found) cls.push('out'); }
+    else {
+      if (!r.done && (idx<r.L||idx>r.R)) cls.push('out');
+      if (r.done && r.found<0) cls.push('out');
+      if (!r.done){
+        if (idx===r.L) marks.push('L'); if (idx===r.R) marks.push('R');
+        if (idx===r.M){ marks.push('M'); cls.push('mid'); tags.push('<span class="tag mid">중앙값</span>'); }
+        if (r.phase==='range' && r.selStart===idx){ cls.push('sel'); tags.push('<span class="tag cmp">시작</span>'); }
+      }
+    }
+    if (idx===r.found){ cls.push('found'); tags.length=0; tags.push('<span class="tag win">찾았다!</span>'); }
+    if (r.pulse.includes(idx)) cls.push('pulse');
+    return `<div class="slot"><div class="tagline">${tags.join('')}</div><button type="button" class="${cls.join(' ')}" data-id="${it.id}" data-idx="${idx}" aria-label="위치 ${idx} 값 ${esc(it.v)}">${esc(it.v)}</button><span class="idx">${idx}</span><div class="marks">${marks.map(m=>`<span class="mark ${m==='M'?'m':''}">${m}</span>`).join('')}</div></div>`;
+  }).join('');
+  flipRender($('#searchCards'), html);
+  $$('#searchCards .tile').forEach(b => b.addEventListener('click', () => searchClick(+b.dataset.idx)));
+  let ah='';
+  if (!r.done){
+    if (T.mode==='binary' && r.phase==='judge') ah += `<button type="button" class="gbtn mint" data-a="left">← 왼쪽 탐색</button><button type="button" class="gbtn mint" data-a="eq">찾았다! 종료</button><button type="button" class="gbtn mint" data-a="right">오른쪽 탐색 →</button>`;
+    if (T.mode==='binary' && r.phase==='range'){ ah += `<button type="button" class="gbtn" data-a="none">남은 범위 없음</button>`; if (r.selStart!==null) ah += `<button type="button" class="gbtn" data-a="cancel">시작 다시 고르기</button>`; }
+    ah += `<button type="button" class="gbtn hint" data-a="hint">힌트${r.hintLv?` ${r.hintLv}/2`:''}</button>`;
+  } else ah += `<button type="button" class="gbtn gold" data-a="result">결과 보기</button>`;
+  const act=$('#searchActions'); act.innerHTML=ah;
+  $$('button',act).forEach(b => b.addEventListener('click', e => searchAction(b.dataset.a, e.currentTarget)));
+  // trail
+  const tl=$('#searchTrail');
+  if (T.mode==='seq'){
+    $('#searchTrailSub').textContent='확인한 값이 차례로 쌓여요';
+    tl.innerHTML = r.checked.length ? `<div class="mini" style="flex-wrap:wrap">${r.checked.map(ix=>`<span class="${ix===r.found?'w':''}">${esc(r.data[ix].v)}</span>`).join('')}</div><p class="sub" style="margin-top:10px">${r.checked.length}번 비교</p>` : '<p class="empty">아직 확인한 카드가 없어요.</p>';
+  } else {
+    $('#searchTrailSub').textContent='탐색 범위가 어떻게 줄었는지 쌓여요';
+    const grewT = r.trail.length > (r.trailShown||0); r.trailShown = r.trail.length;
+    const rows = r.trail.concat((r.done || r.phase==='range') ? [] : [{L:r.L,R:r.R,M:r.M,cur:true}]);
+    tl.innerHTML = rows.map((t,ti)=>{
+      const cells = r.data.map((it,ix)=>{ let c=''; if(ix<t.L||ix>t.R) c='o'; if(ix===t.M) c=t.win?'w':'m'; return `<span class="${c}">${word||r.n>8?'':esc(it.v)}</span>`; }).join('');
+      const size = t.R-t.L+1;
+      const desc = t.M!=null && t.M!==undefined ? `범위 ${t.L}~${t.R} (${size}개) · 중앙값 ${esc(r.data[t.M].v)}${t.res?` · ${t.res}`:''}` : `범위 ${t.L}~${t.R} (${size}개)`;
+      return `<div class="trow ${t.cur?'cur':''} ${grewT&&ti===r.trail.length-1?'new':''}"><span class="lab">${t.cur?'지금':'단계 '+(ti+1)}</span><div class="mini ${word||r.n>8?'cells':''}">${cells}</div><span class="desc">${desc}</span></div>`;
+    }).join('') + (r.done && r.found<0 ? `<div class="trow"><span class="lab">끝</span><span class="desc" style="grid-column:2;margin:0">남은 범위 없음 → 값이 없어요</span></div>` : '');
+  }
+}
+
+function searchErr(idx,msg){ bad(T.run); setFb($('#searchFb'),'err',msg); renderSearch(); if(idx!=null) shakeEl($('#searchCards'),idx); }
+function searchOk(msg,anchor){ good(T.run,anchor); setFb($('#searchFb'),'ok',msg); }
+
+function searchClick(idx){
+  const r=T.run; if (r.done) return; const v=r.data[idx].v; const anchor=$(`#searchCards [data-idx="${idx}"]`);
+  if (T.mode==='seq'){
+    if (idx!==r.k) return searchErr(idx, idx<r.k ? '이미 확인한 카드예요.' : '처음부터 하나씩 차례대로!');
+    r.comps++; r.checked.push(idx); sReset();
+    const hit = cmp(v,T.target)===0;
+    r.log.push({step:r.comps, val:v, text: hit?`${disp(v)} = ${disp(T.target)} → 종료`:`${disp(v)} ≠ ${disp(T.target)} → 다음`});
+    if (hit){ r.found=idx; good(r,anchor); return searchFinish(); }
+    if (idx===r.n-1){ good(r,anchor); return searchFinish(); }
+    r.k++; searchOk(`${disp(v)} ≠ ${disp(T.target)} · 다음 카드로!`, anchor); return renderSearch();
+  }
+  if (r.phase==='mid'){
+    const M=Math.floor((r.L+r.R)/2);
+    if (idx===M){ r.M=M; r.comps++; r.phase='judge'; sReset(); searchOk(`정답! M = (${r.L}+${r.R})÷2 = ${M}`, anchor); return renderSearch(); }
+    if (idx<r.L||idx>r.R) return searchErr(idx,'흐린 카드는 범위 밖이에요!');
+    return searchErr(idx,`M = (L + R) ÷ 2 = (${r.L} + ${r.R}) ÷ 2, 소수점은 버려요.`);
+  }
+  if (r.phase==='range'){
+    const [nl,nr]=expectRange();
+    if (r.selStart===null){ r.selStart=idx; return renderSearch(); }
+    const a=Math.min(r.selStart,idx), b=Math.max(r.selStart,idx); r.selStart=null;
+    if (nl>nr) return searchErr(null,'남은 범위가 있을까요? 아래 버튼을 봐요.');
+    if (a===nl && b===nr){
+      r.trail[r.trail.length-1].next=`${a}~${b}`;
+      r.log[r.log.length-1].next = `${a}~${b} (${b-a+1}개)`;
+      r.L=a; r.R=b; r.M=null; r.phase='mid'; sReset();
+      searchOk(`정답! 후보가 ${b-a+1}개로 줄었어요.`, anchor); return renderSearch();
+    }
+    const lt = cmp(T.target, r.data[r.M].v)<0;
+    if (a<=r.M && r.M<=b) return searchErr(null,'중앙값은 이미 확인했으니 빼요!');
+    if ((lt&&a>r.M)||(!lt&&b<r.M)) return searchErr(null,`찾는 값이 더 ${lt?'작았':'컸'}어요. 중앙값의 ${lt?'왼쪽':'오른쪽'}!`);
+    if (a<r.L||b>r.R) return searchErr(null,'흐린 카드는 이미 제외됐어요.');
+    return searchErr(null,`중앙값 바로 ${lt?'왼쪽까지':'오른쪽부터'} 남은 카드를 모두 넣어요.`);
+  }
+  setFb($('#searchFb'),'','아래 버튼으로 골라 주세요.');
+}
+function searchAction(a, btn){
+  const r=T.run;
+  if (a==='result') return searchResultModal();
+  if (r.done) return;
+  if (a==='hint') return searchHint();
+  if (a==='cancel'){ r.selStart=null; return renderSearch(); }
+  if (r.phase==='judge'){
+    const mv=r.data[r.M].v, c=cmp(T.target,mv), ans=c===0?'eq':c<0?'left':'right';
+    if (a!==ans) return searchErr(null, `${jo(T.target,'과','와')} ${disp(mv)}, 어느 쪽이 더 작나요?`);
+    const res = ans==='eq'?'찾음':ans==='left'?'왼쪽으로':'오른쪽으로';
+    r.trail.push({L:r.L,R:r.R,M:r.M,res,win:ans==='eq'});
+    r.log.push({step:r.log.length+1, range:`${r.L}~${r.R}`, mid:mv, text:rel(T.target,mv), next: ans==='eq'?'탐색 종료':''});
+    sReset();
+    if (ans==='eq'){ r.found=r.M; good(r,btn); return searchFinish(); }
+    r.phase='range'; r.selStart=null;
+    searchOk(`정답! ${rel(T.target,mv)} → ${ans==='left'?'왼쪽':'오른쪽'}. 새 범위를 직접 골라요.`, btn);
+    return renderSearch();
+  }
+  if (r.phase==='range' && a==='none'){
+    const [nl,nr]=expectRange();
+    if (nl<=nr) return searchErr(null,'아직 확인 안 한 카드가 남아 있어요!');
+    r.log[r.log.length-1].next='남은 범위 없음'; good(r,btn); return searchFinish();
+  }
+}
+function searchFinish(){
+  const r=T.run; r.done=true; sReset();
+  const st=starsFor(r.mistakes); T.stars[T.mode]=Math.max(T.stars[T.mode],st);
+  T.logs[T.mode]={key:T.data.join('|')+'#'+T.target, log:r.log, comps:r.comps, found:r.found>=0};
+  setFb($('#searchFb'),'ok', r.found>=0 ? `${r.comps}번 비교해서 찾았어요!` : `${r.comps}번 비교해서 값이 없다는 걸 알아냈어요!`);
+  renderSearch(); updateStars(); beep('win'); confetti();
+  setTimeout(searchResultModal, reduceMotion?0:500);
+}
+function searchResultModal(){
+  const r=T.run, st=starsFor(r.mistakes), other=T.mode==='seq'?'binary':'seq', otherName=other==='seq'?'순차 탐색':'이진 탐색';
+  const key=T.data.join('|')+'#'+T.target; const otherDone = T.logs[other] && T.logs[other].key===key;
+  openModal(`<h2>${T.mode==='seq'?'순차':'이진'} 탐색 클리어!</h2><div class="bigstars">${starStr(st)}</div>
+    <div class="stat-grid"><div><b>${r.comps}</b><span>비교</span></div><div><b>${r.n}</b><span>데이터</span></div><div><b>${r.score}</b><span>점수</span></div><div><b>${r.mistakes}</b><span>실수</span></div></div>
+    <div class="modal-actions">
+      ${otherDone?`<button class="gbtn gold" type="button" data-m="compare">두 탐색 비교하러 가기</button><button class="gbtn" type="button" data-m="random">새 데이터로 다시 도전</button>`
+                 :`<button class="gbtn gold" type="button" data-m="other">같은 데이터로 ${otherName} 도전</button><button class="gbtn" type="button" data-m="compare">바로 비교하러 가기</button>`}
+      <button class="gbtn" type="button" data-m="close">닫기</button></div>`, m => {
+      $$('[data-m]',m).forEach(b => b.addEventListener('click', () => { const k=b.dataset.m; closeModal();
+        if (k==='other') setMode(other); if (k==='compare') setStep('search','compare'); if (k==='random') searchRandom(); }));
+    });
+}
+function searchHint(){
+  const r=T.run; r.hintLv=Math.min(2,r.hintLv+1); r.hints++; r.pulse=[]; const lv=r.hintLv; let h='';
+  if (T.mode==='seq'){ if(lv===1) h='0번 카드부터 차례대로 하나씩!'; else { h=`${r.k}번 카드를 확인할 차례예요.`; r.pulse=[r.k]; } }
+  else if (r.phase==='mid'){ const M=Math.floor((r.L+r.R)/2); if(lv===1) h='M = (L + R) ÷ 2, 소수점은 버려요. 카드 아래 번호를 봐요.'; else { h=`(${r.L} + ${r.R}) ÷ 2 = ${(r.L+r.R)/2} → ${M}번 카드`; r.pulse=[M]; } }
+  else if (r.phase==='judge'){ const mv=r.data[r.M].v, c=cmp(T.target,mv); h = lv===1 ? '찾는 값이 더 작으면 왼쪽, 더 크면 오른쪽에 있어요.' : `${rel(T.target,mv)} → ${c===0?'찾았다!':c<0?'왼쪽':'오른쪽'}`; }
+  else { const [nl,nr]=expectRange(); if(lv===1) h='작으면 L ~ (M−1), 크면 (M+1) ~ R이 새 범위예요.'; else if(nl>nr) h='시작이 끝보다 커져요 → 남은 범위 없음'; else { h=`새 범위는 ${nl}번 ~ ${nr}번`; r.pulse = nl===nr?[nl]:[nl,nr]; } }
+  setFb($('#searchFb'),'hint',h); renderSearch();
+}
+function setMode(mode){
+  T.mode=mode;
+  if (mode==='binary' && T.shuffled){ T.shuffled=null; searchNew(); setFb($('#searchFb'),'hint','이진 탐색은 정렬된 데이터만 가능해서 다시 정렬했어요. 중앙값 카드를 골라요.'); return; }
+  searchNew();
+}
+function searchSettings(){
+  const tmp={kind:T.kind, theme:T.theme, size:T.size};
+  const targetOpts = T.data.map((v,i)=>`<option value="d${i}" ${cmp(v,T.target)===0?'selected':''}>${esc(v)}</option>`).join('') + `<option value="absent" ${T.data.every(v=>cmp(v,T.target)!==0)?'selected':''}>${esc(T.absent)} (없는 값)</option>`;
+  openModal(`<h2>데이터 바꾸기</h2><div class="sheet-fields">
+    <div class="field"><label for="ttTarget">지금 데이터에서 찾을 값 바꾸기</label><div class="sheet-row"><select id="ttTarget">${targetOpts}</select><button class="gbtn small" type="button" id="ttGo">이 값 찾기</button></div></div>
+    ${T.mode==='seq'?`<div class="field"><span class="lab">순차 탐색 전용</span><div class="sheet-row"><button class="gbtn small" type="button" id="ttShuffle">${T.shuffled?'정렬된 데이터로 되돌리기':'데이터 섞어서 찾기'}</button></div></div>`:''}
+    <hr style="border:0;border-top:2px dashed var(--line);margin:4px 0">
+    <div class="field"><span class="lab">새 데이터 종류</span>${seg('ttKind',[['num','숫자'],['word','단어']],tmp.kind)}</div>
+    <div class="field" id="ttThemeF" ${tmp.kind==='num'?'hidden':''}><label for="ttTheme">단어 주제</label>${themeSelect('ttTheme',tmp.theme)}</div>
+    <div class="field"><span class="lab">데이터 수</span>${seg('ttSize',[['6','6개'],['7','7개'],['8','8개'],['10','10개'],['11','11개'],['14','14개'],['15','15개']],String(tmp.size))}</div>
+    </div><div class="modal-actions"><button class="gbtn gold" type="button" id="ttRandom">랜덤 데이터로 시작</button><button class="gbtn small" type="button" id="ttBook">교과서 예제 (10~70에서 50 찾기)</button></div>`, m => {
+      bindSeg(m,'ttKind', v => { tmp.kind=v; $('#ttThemeF',m).hidden = v==='num'; });
+      bindSeg(m,'ttSize', v => tmp.size=+v);
+      $('#ttTheme',m).addEventListener('change', e => tmp.theme=e.target.value);
+      $('#ttGo',m).addEventListener('click', () => { const v=$('#ttTarget',m).value; T.target = v==='absent'?T.absent:T.data[+v.slice(1)]; closeModal(); searchNew(); });
+      const sh=$('#ttShuffle',m); if (sh) sh.addEventListener('click', () => { if (T.shuffled) T.shuffled=null; else { let s; do{ s=shuffle(T.data); }while(s.every((v,i)=>v===T.data[i])); T.shuffled=s; } closeModal(); searchNew(); });
+      $('#ttRandom',m).addEventListener('click', () => { Object.assign(T,tmp); closeModal(); searchRandom(); });
+      $('#ttBook',m).addEventListener('click', () => { T.kind='num'; closeModal(); searchSetData(BOOK,50); });
+    });
+}
+$('#tSettings').addEventListener('click', searchSettings);
+$('#tRestart').addEventListener('click', searchNew);
+$$('#view-search .mtab').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+$$('#view-search [data-start]').forEach(b => b.addEventListener('click', () => { setMode(b.dataset.start); setStep('search','play'); }));
+
+/* 탐색 비교하기 */
+function searchQuestions(){
+  const bd=T.data, n=bd.length, last=bd[n-1], bLast=countBinary(bd,last), sig=bd.join('|');
+  const o1=[...new Set([1,Math.ceil(n/2),n,n+1])].sort((a,b)=>a-b), o2=[...new Set([1,bLast,Math.ceil(n/2),n])].sort((a,b)=>a-b);
+  return [
+    one({id:'seqlast',sig,label:'마지막 값 · 순차',q:`데이터 ${n}개 중 맨 마지막 ${jo(last,'을','를')} <b>순차 탐색</b>으로 찾으면 몇 번 비교?`,opts:o1.map(x=>x+'번'),a:o1.indexOf(n),why:`처음부터 하나씩 → ${n}번 모두 비교해요.`,retry:'처음부터 하나씩 확인한다는 걸 떠올려 봐요.'}),
+    one({id:'binlast',sig,label:'마지막 값 · 이진',q:`같은 값 ${jo(last,'을','를')} <b>이진 탐색</b>으로 찾으면 몇 번 비교?`,sub:'헷갈리면 도전하기에서 찾을 값을 바꿔 직접 해 봐요',opts:o2.map(x=>x+'번'),a:o2.indexOf(bLast),why:`범위가 절반씩 줄어서 ${bLast}번이면 충분해요.`,retry:'범위가 절반씩 줄어든다는 점을 이용해 봐요.'}),
+    one({id:'k1000',sig:'1',label:'1,000개',q:'정렬된 데이터 <b>1,000개</b>, 이진 탐색 최대 비교 횟수는?',opts:['약 10번','약 100번','약 500번','1,000번'],a:0,why:'1,000 → 500 → 250 → … 약 10번이면 끝! 순차 탐색은 최대 1,000번.',retry:'1,000을 반씩 몇 번 나누면 1이 될까요?'}),
+    one({id:'cond',sig:'1',label:'필요 조건',q:'이진 탐색을 쓰려면 <b>꼭 필요한 것</b>은?',opts:['데이터 개수가 짝수','데이터가 정렬되어 있음','찾는 값이 반드시 있음','데이터가 숫자'],a:1,why:'정렬돼 있어야 “왼쪽에 있다/오른쪽에 있다”를 판단할 수 있어요.',retry:'왼쪽, 오른쪽을 판단할 수 있는 이유는 뭘까요?'}),
+    {id:'cards',sig:'2',label:'상황 ①',steps:[
+      {tag:'알고리즘 선택',q:'방금 섞은 카드 <b>6장</b>에서 하트를 <b>딱 한 번</b> 찾아요. 어떤 탐색 알고리즘을 사용하는 게 좋을까?',opts:['순차 탐색','정렬한 뒤 이진 탐색'],a:0,why:'순차 탐색이 좋아요.',retry:'이진 탐색 전에 먼저 해야 할 일은?'},
+      {tag:'이유 선택',q:'순차 탐색을 사용하는 게 좋은 <b>이유</b>는?',opts:['순차 탐색은 언제나 이진 탐색보다 빨라서','이진 탐색은 카드에는 쓸 수 없어서','데이터가 적고 섞여 있어서, 이진 탐색을 위해 정렬하는 시간이 더 걸려서'],a:2,
+       why:'이진 탐색은 먼저 정렬해야 해요. 6장을 한 번만 찾을 때는 정렬하는 시간이 더 아까워요.',retry:'이진 탐색을 쓰려면 먼저 무엇을 해야 하는지 떠올려 봐요.'}
+    ]},
+    {id:'roll',sig:'2',label:'상황 ②',steps:[
+      {tag:'알고리즘 선택',q:'가나다순 <b>전교생 1,000명 명단</b>에서 하루에 여러 번 이름을 찾아요. 어떤 탐색 알고리즘을 사용하는 게 좋을까?',opts:['순차 탐색','이진 탐색'],a:1,why:'이진 탐색이 좋아요.',retry:'데이터 양과 정렬 여부를 같이 생각해 봐요.'},
+      {tag:'이유 선택',q:'이진 탐색을 사용하는 게 좋은 <b>이유</b>는?',opts:['이진 탐색은 정렬이 필요 없어서','이미 정렬되어 있고 데이터가 많아서, 범위를 절반씩 줄이면 훨씬 적게 비교해서','명단에 있는 이름이 적어서'],a:1,
+       why:'정렬된 1,000명이면 이진 탐색은 최대 약 10번, 순차 탐색은 최대 1,000번 비교해요.',retry:'명단이 이미 어떤 상태인지, 몇 명인지 떠올려 봐요.'}
+    ]}
+  ];
+}
+function searchPages(){ const qs=searchQuestions(); return [{t:'vs',label:'점수판'}].concat(qs.map(q=>({t:'q',q,label:q.label})), [{t:'lab',label:'실험실'},{t:'end',label:'나의 결론'}]); }
+function renderSearchCompare(){
+  const pages=searchPages(); T.cpage=Math.max(0,Math.min(T.cpage,pages.length-1)); const pg=pages[T.cpage], box=$('#searchPage');
+  const solved = i => pages[i].t==='q' ? isSolved(T.quiz,pages[i].q) : i<T.cpage;
+  renderDots($('#searchDots'), pages, T.cpage, solved, i => { T.cpage=i; renderSearchCompare(); });
+  let canNext=true;
+  if (pg.t==='vs'){
+    const sc=countSeq(seqData(),T.target), bc=countBinary(T.data,T.target), n=T.data.length, key=T.data.join('|')+'#'+T.target;
+    const mine = k => T.logs[k] && T.logs[k].key===key;
+    const card=(k,name,c,worst,win)=>`<div class="score-card"><h3>${name}</h3><span class="mine ${mine(k)?'yes':''}">${mine(k)?'직접 해 봄':'아직 안 해 봄'}</span>
+      <div class="big"><div class="${win?'win':''}"><b>${c}</b><span>이번 비교</span></div><div><b>${worst}</b><span>최대 비교</span></div></div></div>`;
+    box.innerHTML = `<h2>점수판: 순차 vs 이진</h2><p class="lead">데이터 ${n}개에서 ${jo(T.target,'을','를')} 찾을 때</p>
+      <div class="vs-grid">${card('seq','순차 탐색',sc,n,sc<bc)}<div class="vs-badge">VS</div>${card('binary','이진 탐색',bc,Math.floor(Math.log2(n))+1,bc<sc)}</div>
+      <p class="vs-note">${sc<bc?'이번에는 순차 탐색이 더 빨랐어요! 왜 그럴까요?':sc===bc?'이번에는 비교 횟수가 같아요. 찾을 값을 바꿔 보면?':'이진 탐색이 더 적게 비교했어요.'}</p>
+      <div class="replay">${['seq','binary'].filter(mine).map(k=>`<button class="gbtn small" type="button" data-replay="${k}">${k==='seq'?'순차':'이진'} 탐색 과정 다시 보기</button>`).join(' ')}<div id="replayBoxS"></div></div>`;
+    $$('[data-replay]',box).forEach(bt => bt.addEventListener('click', () => { $('#replayBoxS').innerHTML = searchLogTable(bt.dataset.replay); }));
+  } else if (pg.t==='q'){
+    canNext = renderQuestion(box, pg.q, T.quiz, T.cpage-1, pages.length-3, renderSearchCompare);
+  } else if (pg.t==='lab'){
+    box.innerHTML = `<h2>효율성 실험실</h2><p class="lead">데이터가 많아지면 최대 비교 횟수는?</p>
+      <div class="lab-controls"><div class="field"><label for="labSN">데이터 개수</label><select id="labSN"><option value="7">7개</option><option value="100">100개</option><option value="1000">1,000개</option><option value="10000">1만 개</option><option value="1000000">100만 개</option><option value="50000000">5,000만 개 (대한민국 인구 정도)</option></select></div></div>
+      <div class="bars" id="searchLab"></div>`;
+    $('#labSN').value = String(T.labN||1000);
+    $('#labSN').addEventListener('change', e => { T.labN=+e.target.value; drawSearchLab(); });
+    drawSearchLab();
+  } else {
+    box.innerHTML = conclusionHtml('search','언제 어떤 탐색을 고를까?','데이터의 양과 정렬 여부를 근거로 써 보세요.','예) 데이터가 정렬되어 있고 양이 많을 때는 ... 탐색을 고르겠다. 왜냐하면 ...',[['순차 탐색',T.stars.seq],['이진 탐색',T.stars.binary]]);
+    bindConclusion('search');
+  }
+  $('#tPrev').disabled = T.cpage===0;
+  $('#tNext').disabled = !canNext || T.cpage===pages.length-1;
+  $('#tNext').textContent = canNext ? '다음' : '정답을 맞혀야 넘어가요';
+}
+$('#tPrev').addEventListener('click', () => { T.cpage--; renderSearchCompare(); window.scrollTo(0,0); });
+$('#tNext').addEventListener('click', () => { T.cpage++; renderSearchCompare(); window.scrollTo(0,0); });
+function searchLogTable(k){
+  const L=T.logs[k];
+  if (k==='seq') return `<div class="log-wrap"><table class="log"><thead><tr><th>단계</th><th>확인한 값</th><th>판단</th><th>비교</th></tr></thead><tbody>${L.log.map(e=>`<tr><td>단계 ${e.step}</td><td><div class="snap"><span class="c">${esc(e.val)}</span></div></td><td>${e.text}</td><td class="n">1</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3">합계</td><td class="n">${L.comps}</td></tr></tfoot></table></div>`;
+  return `<div class="log-wrap"><table class="log"><thead><tr><th>단계</th><th>범위 (L~R)</th><th>중앙값</th><th>비교 결과</th><th>다음 범위</th><th>비교</th></tr></thead><tbody>${L.log.map(e=>`<tr><td>단계 ${e.step}</td><td>${e.range}</td><td><div class="snap"><span class="m">${esc(e.mid)}</span></div></td><td>${e.text}</td><td>${e.next||''}</td><td class="n">1</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="5">합계</td><td class="n">${L.comps}</td></tr></tfoot></table></div>`;
+}
+function drawSearchLab(){
+  const n=T.labN||1000, s=n, b=Math.floor(Math.log2(n))+1;
+  const time = sec => sec<60?`${fmt(sec)}초`:sec<3600?`약 ${fmt(Math.round(sec/60))}분`:sec<86400?`약 ${fmt(Math.round(sec/3600))}시간`:sec<86400*365?`약 ${fmt(Math.round(sec/86400))}일`:`약 ${fmt(Math.round(sec/86400/365*10)/10)}년`;
+  const bar=(l,v,c)=>`<div class="bar"><span>${l}</span><div class="track"><div class="fill ${c}" style="width:${v/s*100}%"></div></div><span class="v">${fmt(v)}</span></div>`;
+  $('#searchLab').innerHTML = `<div class="bar-group"><h4>최대 비교 횟수 (데이터 ${fmt(n)}개)</h4>${bar('순차',s,'c')}${bar('이진',b,'')}</div>
+    <div class="callout">한 번 비교에 1초라면? 순차 탐색 ${time(s)}, 이진 탐색 ${time(b)}!</div>`;
+}
+
+/* ======================================================
+   점검 퀴즈 (형성평가)
+   ====================================================== */
+const QZDATA = [
+  {topic:'버블 정렬', world:'sort', q:'카드 [6, 3, 8, 2]를 <b>버블 정렬</b>로 오름차순 정렬해요. <b>단계 1</b>이 끝난 뒤 카드 배치는?', cards:[6,3,8,2],
+   opts:['3, 6, 2, 8','2, 3, 6, 8','3, 6, 8, 2','6, 3, 2, 8'], a:0,
+   why:'6>3 교환 → 3, 6, 8, 2 / 6<8 그대로 / 8>2 교환 → 3, 6, 2, 8. 가장 큰 8이 맨 뒤에 고정돼요.'},
+  {topic:'선택 정렬', world:'sort', q:'카드 [7, 4, 9, 1, 5]를 <b>선택 정렬</b>로 오름차순 정렬해요. <b>단계 1</b>이 끝난 뒤 카드 배치는?', cards:[7,4,9,1,5],
+   opts:['4, 7, 1, 5, 9','1, 4, 9, 7, 5','1, 4, 5, 7, 9','4, 7, 9, 1, 5'], a:1,
+   why:'최솟값 1을 찾아 기준 위치(첫 번째)의 7과 교환해요 → 1, 4, 9, 7, 5. 4, 7, 1, 5, 9는 버블 정렬 단계 1의 결과예요.'},
+  {topic:'정렬 효율성', world:'sort', q:'카드 <b>5장</b>을 선택 정렬할 때, 비교 횟수와 <b>최대</b> 교환 횟수는?',
+   opts:['비교 10번, 교환 최대 4번','비교 10번, 교환 최대 10번','비교 4번, 교환 최대 4번','비교 25번, 교환 최대 5번'], a:0,
+   why:'비교는 4 + 3 + 2 + 1 = 10번이에요. 선택 정렬은 단계마다 교환이 최대 1번이고 단계가 4개라서 최대 4번이에요. 버블 정렬은 최악의 경우 교환도 10번이에요.'},
+  {topic:'이진 탐색', world:'search', q:'정렬된 데이터에서 <b>이진 탐색</b>을 시작해요. 처음 비교할 <b>중앙값</b>은?', cards:[3,8,12,17,21,25,30,34], showIdx:true,
+   opts:['17','21','12','25'], a:0,
+   why:'L = 0, R = 7 → M = (0 + 7) ÷ 2 = 3.5 → 소수점을 버려 3번 위치, 값은 17이에요.'},
+  {topic:'이진 탐색', world:'search', q:'같은 데이터에서 <b>30</b>을 찾아요. 중앙값 17과 비교한 뒤, 새로운 탐색 범위는?', cards:[3,8,12,17,21,25,30,34], showIdx:true,
+   opts:['위치 4 ~ 7 (21 ~ 34)','위치 3 ~ 7 (17 ~ 34)','위치 0 ~ 2 (3 ~ 12)','위치 5 ~ 7 (25 ~ 34)'], a:0,
+   why:'30 > 17 이므로 오른쪽을 탐색해요. 이미 비교한 중앙값은 빼고, M + 1 = 4번부터 R = 7번까지가 새 범위예요.'},
+  {topic:'탐색 효율성', world:'search', q:'같은 데이터에서 맨 앞의 <b>3</b>을 찾을 때, 순차 탐색과 이진 탐색의 비교 횟수는?', cards:[3,8,12,17,21,25,30,34],
+   opts:['순차 1번, 이진 3번','순차 1번, 이진 1번','순차 8번, 이진 3번','순차 3번, 이진 1번'], a:0,
+   why:'순차 탐색은 첫 번째 값이 바로 3이라 1번이에요. 이진 탐색은 17 → 8 → 3 순서로 3번 비교해요. 이진 탐색이 항상 더 빠른 건 아니에요!'},
+  {topic:'종합', world:null, q:'다음 중 <b>옳은</b> 설명은?',
+   opts:['버블 정렬과 선택 정렬은 같은 데이터를 정렬할 때 비교 횟수가 같다','이진 탐색은 정렬되지 않은 데이터에서도 쓸 수 있다','순차 탐색은 항상 이진 탐색보다 느리다','선택 정렬은 한 단계에서 여러 번 교환한다'], a:0,
+   why:'두 정렬은 비교 횟수가 같고 교환 횟수가 달라요. 이진 탐색은 정렬된 데이터가 필요하고, 순차 탐색이 더 빠를 때도 있어요. 선택 정렬은 한 단계에 교환이 최대 1번이에요.'}
+];
+const QZ = { phase:'intro', order:[], pos:0, picked:null, results:{}, full:false, best:null };
+function qzCards(q){
+  if (!q.cards) return '';
+  return `<div class="qcards"><div class="cards">${q.cards.map((v,i)=>`<div class="slot"><div class="tile">${v}</div>${q.showIdx?`<span class="idx">${i}</span>`:''}</div>`).join('')}</div></div>`;
+}
+function qzStart(order, full){ QZ.order=order; QZ.pos=0; QZ.picked=null; QZ.results={}; QZ.full=full; QZ.phase='q'; renderQZ(); window.scrollTo(0,0); }
+function renderQZ(){
+  const page=$('#qzPage'), prog=$('#qzProgress');
+  prog.innerHTML = QZ.phase==='intro' ? '' : QZ.order.map((qi,k)=>{ const r=QZ.results[qi]; return `<span class="${r===undefined?(k===QZ.pos&&QZ.phase==='q'?'now':''):(r?'o':'x')}">${qi+1}</span>`; }).join('');
+  if (QZ.phase==='intro'){
+    page.innerHTML = `<div class="qz-intro"><div class="big">7문항</div><h2>정말 이해했는지 점검해 볼까요?</h2>
+      <p class="lead">한 문제에 한 번만 답할 수 있어요. 답을 고르면 바로 해설이 나와요.</p>
+      <div class="qz-topics">${[...new Set(QZDATA.map(q=>q.topic))].map(t=>`<span class="chip">${t}</span>`).join('')}</div>
+      <button class="gbtn gold" type="button" id="qzGo">퀴즈 시작</button></div>`;
+    $('#qzGo').addEventListener('click', () => qzStart(QZDATA.map((_,i)=>i), true));
+    return;
+  }
+  if (QZ.phase==='q'){
+    const qi=QZ.order[QZ.pos], q=QZDATA[qi], picked=QZ.picked, done=picked!==null;
+    page.innerHTML = `<div class="qcard"><div class="qz-head"><span class="chip">${QZ.pos+1} / ${QZ.order.length}</span><span class="chip coral">${q.topic}</span></div>
+      <p class="q">${q.q}</p>${qzCards(q)}
+      <div class="opts n${q.opts.length}">${q.opts.map((o,oi)=>{ let c='opt'; if(done&&oi===q.a) c+=' right'; else if(done&&oi===picked) c+=' wrong'; return `<button type="button" class="${c}" data-o="${oi}" ${done?'disabled':''}>${o}</button>`; }).join('')}</div>
+      ${done?`<div class="qz-why ${picked===q.a?'ok':'err'}"><b>${picked===q.a?'정답이에요!':'아쉬워요. 정답은 '+String.fromCharCode(65+q.a)+'번이에요.'}</b>${q.why}</div>
+      <div class="qz-next"><button class="gbtn gold" type="button" id="qzNext">${QZ.pos===QZ.order.length-1?'결과 보기':'다음 문제'}</button></div>`:''}</div>`;
+    if (!done) $$('.opt',page).forEach(b => b.addEventListener('click', () => { QZ.picked=+b.dataset.o; QZ.results[qi] = QZ.picked===q.a; beep(QZ.results[qi]?'ok':'err'); renderQZ(); }));
+    else $('#qzNext').addEventListener('click', () => { QZ.pos++; QZ.picked=null; if (QZ.pos>=QZ.order.length){ QZ.phase='end'; if (QZ.full){ const sc=QZ.order.filter(i=>QZ.results[i]).length; QZ.best=Math.max(QZ.best??0, sc); } } renderQZ(); window.scrollTo(0,0); });
+    return;
+  }
+  // end
+  const total=QZ.order.length, sc=QZ.order.filter(i=>QZ.results[i]).length, wrong=QZ.order.filter(i=>!QZ.results[i]);
+  const st = sc===total ? 3 : sc>=total-2 ? 2 : 1;
+  const weakWorlds=[...new Set(wrong.map(i=>QZDATA[i].world).filter(Boolean))];
+  page.innerHTML = `<div class="qz-score"><h2>${QZ.full?'점검 결과':'다시 푼 결과'}</h2><div class="num">${sc}<small> / ${total}</small></div><div class="stars qz-stars">${starStr(st)}</div>
+    <p class="lead">${sc===total?'완벽해요! 알고리즘을 잘 이해하고 있어요.':wrong.length?'틀린 문제를 다시 확인해 봐요.':''}</p></div>
+    <div class="qz-list">${QZ.order.map(i=>{ const q=QZDATA[i], ok=QZ.results[i];
+      return `<div class="qz-row ${ok?'':'x'}"><span class="mk">${ok?'O':'X'}</span><span class="t">${i+1}번 · ${q.topic}${ok?'':`<small>정답: ${q.opts[q.a]}</small>`}</span><span class="tp">${ok?'정답':'오답'}</span></div>`; }).join('')}</div>
+    <div class="qz-actions">
+      ${wrong.length?`<button class="gbtn gold" type="button" id="qzRetry">틀린 문제 다시 풀기</button>`:''}
+      ${weakWorlds.map(w=>`<button class="gbtn" type="button" data-review="${w}">${w==='sort'?'정렬':'탐색'} 월드에서 복습하기</button>`).join('')}
+      <button class="gbtn" type="button" id="qzAgain">처음부터 다시</button>
+      ${QZ.full?`<button class="gbtn" type="button" id="qzCopy">결과 복사</button>`:''}
+    </div><p class="copy-row" id="qzCopyMsg"></p>`;
+  const r=$('#qzRetry'); if (r) r.addEventListener('click', () => qzStart(wrong, false));
+  $('#qzAgain').addEventListener('click', () => qzStart(QZDATA.map((_,i)=>i), true));
+  $$('[data-review]',page).forEach(b => b.addEventListener('click', () => { go(b.dataset.review); setStep(b.dataset.review,'learn'); }));
+  const c=$('#qzCopy'); if (c) c.addEventListener('click', async () => {
+    const txt=`[정렬·탐색 점검 퀴즈] ${sc}/${total}점` + (wrong.length?` · 틀린 문항: ${wrong.map(i=>`${i+1}번(${QZDATA[i].topic})`).join(', ')}`:' · 모두 정답');
+    try{ await navigator.clipboard.writeText(txt); $('#qzCopyMsg').textContent='복사 완료! 학습지나 제출란에 붙여 넣으세요.'; }catch(e){ $('#qzCopyMsg').textContent=txt; }
+  });
+  $('#homeQuizBest').textContent = QZ.best!=null ? `최고 점수 ${QZ.best} / 7` : '아직 안 풀었어요';
+  if (sc===total) confetti();
+}
+
+/* ========== 시작 ========== */
+sortNew([5,2,7,3]);
+searchNew();
+setStep('sort','learn'); setStep('search','learn');
+go(location.hash.slice(1)||'home');
+})();
+</script>
+</body>
+</html>
